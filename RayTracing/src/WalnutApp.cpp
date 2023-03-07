@@ -19,6 +19,7 @@ public:
 
 		if (ImGui::Button("Render"))
 		{
+			// this renders every frame.
 			Render();
 		}
 
@@ -101,5 +102,5 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 			ImGui::EndMenu();
 		}
 	});
-	return app;
+	return app;	
 }
