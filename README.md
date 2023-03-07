@@ -106,3 +106,5 @@ Adding an image:
 
 
 Side note: 32 bits is the size of the RGBA format; each channel is 1 byte. 
+
+# Section 2: Rays, Sphere, and Mathematics
