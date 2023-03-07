@@ -45,9 +45,58 @@ Next, we will clone the newly created repo using the following command:
 git clone --recursive https://github.com/athirazizi/RayTracing/
 ```
 
-## Step 3: Run the solution
+## Step 3: Setting up the project
+
+Once the repo has been cloned, run the `Setup.bat` script:
+
+<img src = "https://user-images.githubusercontent.com/108275763/223405033-9927e8f8-fb72-4891-99ac-7ac27e061f81.png" height = 512>
+
+
+Opening the `Walnut.cpp` file:
+
+```cpp
+#include "Walnut/Application.h"
+#include "Walnut/EntryPoint.h"
+
+#include "Walnut/Image.h"
+
+class ExampleLayer : public Walnut::Layer
+{
+public:
+	virtual void OnUIRender() override
+	{
+		ImGui::Begin("Hello");
+		ImGui::Button("Button");
+		ImGui::End();
+
+		ImGui::ShowDemoWindow();
+	}
+};
+
+Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
+{
+	Walnut::ApplicationSpecification spec;
+	spec.Name = "Walnut Example";
+
+	Walnut::Application* app = new Walnut::Application(spec);
+	app->PushLayer<ExampleLayer>();
+	app->SetMenubarCallback([app]()
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Exit"))
+			{
+				app->Close();
+			}
+			ImGui::EndMenu();
+		}
+	});
+	return app;
+}
+```
 
 As with any new project, hit F5 and run the solution. This is what we are greeted with:
 
 <img src="https://user-images.githubusercontent.com/108275763/223400005-52ee0109-325f-4031-9c30-80f7d2b6e7b0.png" height = 512>
 
+Side note: 32 bits is the size of the RGBA format; each channel is 1 byte. 
