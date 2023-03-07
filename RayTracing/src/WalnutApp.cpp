@@ -77,6 +77,7 @@ public:
 	}
 
 private:
+	// this is the image
 	std::shared_ptr<Image>m_Image;
 	// buffer for image data
 	uint32_t* m_ImageData = nullptr;
