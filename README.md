@@ -102,7 +102,7 @@ As with any new project, hit F5 and run the solution. This is what we are greete
 
 The UI elements are rendered using Vulkan. The menus can be resized and docked to the window.
 
-Adding an image:
+**How do I load up an image?**
 
 
 
