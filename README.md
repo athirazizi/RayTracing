@@ -3,7 +3,7 @@
 Hello! this GitHub repo serves as a front to present my BSc project on "Scene Rendering using Ray Tracing (Iterative)".
 In this 'README.md' file, I will explain fully the concepts related to ray tracing, and the steps to replicate the project.
 
-#0. Resources
+# Resources
 
 Luckily for us, there is an abundance of resources for ray tracing since its first implementation in 1982:
 
