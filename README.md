@@ -16,13 +16,13 @@ For the purposes of this project, we will be using the following:
 We are applying ray tracing techniques from the former book series in real time scenarios, as opposed to a program which simply writes pixels to a file.
 The source content will be similar, but we will also implement and use triangles which can later be used to render 3D meshes.
 
-Tools:
+Other resources:
 - C++
 - Windows 10
 - Visual Studio 2022 <br> https://visualstudio.microsoft.com/
 - Vulkan SDK <br> https://vulkan.lunarg.com/
 - Desmos <br> https://www.desmos.com/calculator
-
+- imgui <br> https://github.com/ocornut/imgui
 # Section 1: Welcome to Ray Tracing!
 
 ## Step 1: Using Walnut
@@ -98,5 +98,11 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 As with any new project, hit F5 and run the solution. This is what we are greeted with:
 
 <img src="https://user-images.githubusercontent.com/108275763/223400005-52ee0109-325f-4031-9c30-80f7d2b6e7b0.png" height = 512>
+
+The UI elements are rendered using Vulkan. The menus can be resized and docked to the window.
+
+Adding an image:
+
+
 
 Side note: 32 bits is the size of the RGBA format; each channel is 1 byte. 
