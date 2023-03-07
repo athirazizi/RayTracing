@@ -11,5 +11,8 @@ Luckily for us, there is an abundance of resources for ray tracing since its fir
 
 For the purposes of this project, we will be using the following:
 
-Ray Tracing in One Weekend Series 
-https://raytracing.github.io/![image](https://user-images.githubusercontent.com/108275763/223368877-1649184a-037c-4344-966d-163abe977c55.png)
+Ray Tracing in One Weekend Series
+https://raytracing.github.io/
+
+
+
