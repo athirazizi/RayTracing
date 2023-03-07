@@ -45,3 +45,9 @@ Next, we will clone the newly created repo using the following command:
 git clone --recursive https://github.com/athirazizi/RayTracing/
 ```
 
+## Step 3: Run the solution
+
+As with any new project, hit F5 and run the solution. This is what we are greeted with:
+
+<img src="https://user-images.githubusercontent.com/108275763/223400005-52ee0109-325f-4031-9c30-80f7d2b6e7b0.png" height = 512>
+
