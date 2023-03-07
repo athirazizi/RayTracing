@@ -51,3 +51,4 @@ As with any new project, hit F5 and run the solution. This is what we are greete
 
 <img src="https://user-images.githubusercontent.com/108275763/223400005-52ee0109-325f-4031-9c30-80f7d2b6e7b0.png" height = 512>
 
+Side note: 32 bits is the size of the RGBA format; each channel is 1 byte. 
