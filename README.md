@@ -3,7 +3,7 @@
 Hello! This GitHub repo serves as a front to present my BSc project on "Scene Rendering using Ray Tracing".
 In this `README.md` file, I will explain fully the concepts related to ray tracing, and the steps to replicate the project.
 
-# Section 0 - Resources
+# Section 0: Resources
 
 Luckily for us, there is an abundance of resources for ray tracing since its first implementation in 1982:
 
@@ -21,7 +21,27 @@ Tools:
 - Windows 10
 - Visual Studio 2022 <br> https://visualstudio.microsoft.com/
 - Vulkan SDK <br> https://vulkan.lunarg.com/
+- Desmos <br> https://www.desmos.com/calculator
 
-# Section 1 - Welcome to Ray Tracing!
+# Section 1: Welcome to Ray Tracing!
 
-hiya
+## Step 1: Using Walnut
+
+Walnut is an application development framework developed by GitHub user @TheCherno and this will act as the base of the project.
+
+- Walnut template <br> https://github.com/TheCherno/WalnutAppTemplate
+
+<img src = "https://user-images.githubusercontent.com/108275763/223398284-b21ad558-b5c9-4c74-ba6e-f2620440e471.png" height = 256>
+
+By clicking 'Use this template' on the GitHub Page, we have created a private repository (this repo!).
+
+- https://github.com/athirazizi/RayTracing/
+
+## Step 2: Clone the Repo
+
+Next, we will clone the newly created repo using the following command:
+
+```
+git clone --recursive https://github.com/athirazizi/RayTracing/
+```
+
