@@ -10,13 +10,9 @@ Luckily for us, there is an abundance of resources for ray tracing since its fir
 ![image](https://user-images.githubusercontent.com/108275763/223368461-63fd1ca4-da48-4b0d-8e5e-1fd7241e02ca.png)
 
 For the purposes of this project, we will be using the following:
-
-'''
-Ray Tracing in One Weekend Series: https://raytracing.github.io/
-'''
+> Ray Tracing in One Weekend Series: https://raytracing.github.io/
 
 We are applying ray tracing techniques from this book series in real time scenarios, as opposed to a program which simply writes pixels to a file.
-
 The source content will be similar, but we will also implement and use triangles which can later be used to render 3D meshes.
 
 Tools:
@@ -26,7 +22,6 @@ Tools:
 - Vulkan SDK: https://vulkan.lunarg.com/
 
 Other resources:
-
-Physically Based Rendering, From Theory to Implementation: https://www.pbr-book.org/
+> Physically Based Rendering, From Theory to Implementation: https://www.pbr-book.org/
 
 # Welcome to Ray Tracing!
