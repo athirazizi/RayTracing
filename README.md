@@ -3,7 +3,7 @@
 Hello! This GitHub repo serves as a front to present my BSc project on "Scene Rendering using Ray Tracing".
 In this `README.md` file, I will explain fully the concepts related to ray tracing, and the steps to replicate the project.
 
-# Resources
+# Section 0 - Resources
 
 Luckily for us, there is an abundance of resources for ray tracing since its first implementation in 1982:
 
@@ -22,6 +22,6 @@ Tools:
 - Visual Studio 2022 <br> https://visualstudio.microsoft.com/
 - Vulkan SDK <br> https://vulkan.lunarg.com/
 
-# Welcome to Ray Tracing!
+# Section 1 - Welcome to Ray Tracing!
 
 hiya
