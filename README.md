@@ -23,6 +23,7 @@ Other resources:
 - Vulkan SDK <br> https://vulkan.lunarg.com/
 - Desmos <br> https://www.desmos.com/calculator
 - imgui <br> https://github.com/ocornut/imgui
+
 # Section 1: Welcome to Ray Tracing!
 
 ## Step 1: Using Walnut
