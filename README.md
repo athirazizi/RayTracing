@@ -1,7 +1,7 @@
 # RayTracing
 
-Hello! this GitHub repo serves as a front to present my BSc project on "Scene Rendering using Ray Tracing (Iterative)".
-In this 'README.md' file, I will explain fully the concepts related to ray tracing, and the steps to replicate the project.
+Hello! This GitHub repo serves as a front to present my BSc project on "Scene Rendering using Ray Tracing (Iterative)".
+In this `README.md` file, I will explain fully the concepts related to ray tracing, and the steps to replicate the project.
 
 # Resources
 
@@ -16,7 +16,7 @@ For the purposes of this project, we will be using the following:
 We are applying ray tracing techniques from this book series in real time scenarios, as opposed to a program which simply writes pixels to a file.
 The source content will be similar, but we will also implement and use triangles which can later be used to render 3D meshes.
 
-*Tools:*
+**Tools:**
 - C++
 - Windows 10
 - Visual Studio 2022: https://visualstudio.microsoft.com/
