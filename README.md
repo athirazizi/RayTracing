@@ -11,7 +11,9 @@ Luckily for us, there is an abundance of resources for ray tracing since its fir
 
 For the purposes of this project, we will be using the following:
 
-'''Ray Tracing in One Weekend Series: https://raytracing.github.io/'''
+'''
+Ray Tracing in One Weekend Series: https://raytracing.github.io/
+'''
 
 We are applying ray tracing techniques from this book series in real time scenarios, as opposed to a program which simply writes pixels to a file.
 
