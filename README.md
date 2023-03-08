@@ -578,3 +578,4 @@ The answer is correct compared to Desmos:
 There is a rounding error because we approximated $\sqrt{32}$ as $5.66$.
 
 # Section 3: Rendering a Sphere Using Ray Tracing
+
