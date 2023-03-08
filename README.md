@@ -28,7 +28,7 @@ Other resources:
 
 ## Step 1: Using Walnut
 
-Walnut is an application development framework developed by GitHub user @TheCherno and this will act as the base of the project.
+Walnut is an application development framework developed by GitHub user [@TheCherno](https://github.com/TheCherno/) and this will act as the base of the project.
 
 - Walnut template <br> https://github.com/TheCherno/WalnutAppTemplate
 
