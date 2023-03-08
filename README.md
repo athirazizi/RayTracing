@@ -435,6 +435,8 @@ When you square something, there are two solutions to a square root:
 
 $$\sqrt{4}=2$$
 
+$$\sqrt{4}=-2$$
+
 We know that:
 
 $$2^2 = 4$$
