@@ -346,7 +346,7 @@ Because they are simple to define mathematically:
 
 In this section I will cover some of the mathematics related to ray tracing. The mathematics will be done in 2D (for the sake of simplicity), since the only difference is that a sphere will have a $z$ component, where a circle does not. In the actual code, of course we will have to acknowledge the 3rd dimension.
 
-## Lines and rays
+## Section 2.1: Lines and rays
 
 To get started, we must understand what a line is, since it is conceptually similar to a ray.
 
@@ -398,4 +398,76 @@ $$P_{y} = a_{y} + b_{y} \cdot t$$
 
 These are called parametric equations. If there was a $z$ component, we would simply add another parametric equation.
 
-## Spheres and circles
+## Section 2.2: Spheres and circles
+
+Spheres are similar to circles, except that they have a $z$ dimension. 
+
+The equation of a circle is:
+
+$$(x-a)^2 + (y-b)^2 = r^2$$
+
+Where $(a,b)$ are the coordinates of the origin and $r$ is the radius.
+
+For example:
+
+![image](https://user-images.githubusercontent.com/108275763/223714444-9c569d19-5bd6-4b5f-9625-32b5a160693a.png)
+
+This circle has the origin $(0,0)$ and a radius of $2$.
+
+We can substitute these values into the equation:
+
+$$(x-0)^2 + (y-0)^2 = 2^2$$
+
+$$(x)^2 + (y)^2 = 4$$
+
+Let us rearrange the equation to resemble $y=mx+c$:
+
+$$y=\sqrt{4-x^2}$$
+
+Entering this into desmos and we get:
+
+![image](https://user-images.githubusercontent.com/108275763/223716951-3b43e862-30d9-48f8-81de-1e848f5d4d9c.png)
+
+
+- Why is the other half missing?
+
+When you square something, there are two solutions to a square root:
+
+$$\sqrt{4}=2$$
+
+We know that:
+
+$$2^2 = 4$$
+
+$$(-2)^2 = 4$$
+
+We do not know whether the answer to $\sqrt{4}$ is $2$ or $-2$. It could be either one. 
+
+Because of this, to see the entire graph, we need to input plus or minus on the result of the square root:
+
+$$y=\pm\sqrt{4-x^2}$$
+
+![image](https://user-images.githubusercontent.com/108275763/223717043-35ec022c-daf3-4a13-af47-4ce940cd6f1f.png)
+
+Now, we can see both halves because we take into account both solutions.
+
+Suppose that a ray has an origin $(-3,-3)$ that goes in direction $(1,1)$, how would know if it collides with the circle above?
+
+On Desmos, we can visually see the solutions:
+
+![image](https://user-images.githubusercontent.com/108275763/223718246-f25fae88-402c-4188-b675-22329abcd6ac.png)
+
+We need to formulate an equation to find these collisions in program code. 
+
+The equation of sphere is similar to a circle, but with a $z$ component:
+
+$$(x-a)^2 + (y-b)^2 + (z-c)^2 = r^2$$
+
+## Section 2.3 How does this relate to ray tracing?
+
+We want to render an image similar to this:
+
+![image](https://user-images.githubusercontent.com/108275763/223720753-736b8c3b-b8be-43a8-9113-a32753af0263.png)
+
+And later, we want to add some lighting to show that the object in the image is a 3D sphere:
+
