@@ -51,7 +51,7 @@ public:
 	{
 		Timer timer;
 
-		// create and image if there is no image
+		// create an image if there is no image
 		// or if the viewport lengths are not the same as the image lengths
 		if (!m_Image || m_ViewportWidth != m_Image->GetWidth() || m_ViewportHeight != m_Image->GetHeight()) 
 		{
