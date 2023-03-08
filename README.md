@@ -346,6 +346,8 @@ Because they are simple to define mathematically:
 
 In this section I will cover some of the mathematics related to ray tracing. The mathematics will be done in 2D (for the sake of simplicity), since the only difference is that a sphere will have a $z$ component, where a circle does not. In the actual code, of course we will have to acknowledge the 3rd dimension.
 
+## Lines and rays
+
 To get started, we must understand what a line is, since it is conceptually similar to a ray.
 
 On a cartesian plane, with an $x$ axis and a $y$ axis, the most basic line we can draw is $y=x$:
@@ -369,18 +371,31 @@ In addition, we want to define a point on the line somewhere. In this case, we a
 
 We can think of this ray as a function:
 
-$$P_{(x,y)} (t) = a_{(x,y)} + b_{(x,y)} \cdot t$$
+$$P_{x,y} (t) = a_{x,y} + b_{x,y} \cdot t$$
 
 Suppose that the origin had coordinates $(2,2)$ and the direction of $(1,1)$:
 <br> If we wanted to find a point a long the line of 2 units down that line, we would substitute $t=2$.
 
 Using the equation:
 
-$$P_{(x,y)} (t) = (2,2) + (1,1) \cdot (2)$$
+$$P_{x,y} (2) = (2,2) + (1,1) \cdot (2)$$
 
 This would return:
 
-$$P_{(x,y)} (t) = (4,4)$$
+$$P_{x,y} (2) = (4,4)$$
 
 ![image](https://user-images.githubusercontent.com/108275763/223706941-771ff071-c817-4244-8f8b-53ae7c338a66.png)
 
+If we enter a negative variable to $t$, we will go backwards from the origin:
+
+![image](https://user-images.githubusercontent.com/108275763/223708157-bb4fff9c-7c6d-493a-831c-ac223e30217e.png)
+
+If the values are not identical in $x$ and $y$, we can split up the function by dimension or by component:
+
+$$P_{x} = a_{x} + b_{x} \cdot t$$
+
+$$P_{y} = a_{y} + b_{y} \cdot t$$
+
+These are called parametric equations. If there was a $z$ component, we would simply add another parametric equation.
+
+## Spheres and circles
