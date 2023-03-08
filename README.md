@@ -463,7 +463,7 @@ The equation of sphere is similar to a circle, but with a $z$ component:
 
 $$(x-a)^2 + (y-b)^2 + (z-c)^2 = r^2$$
 
-## Section 2.3 How does this relate to ray tracing?
+## Section 2.3: How does this relate to ray tracing?
 
 We want to render an image similar to this:
 
@@ -471,3 +471,14 @@ We want to render an image similar to this:
 
 And later, we want to add some lighting to show that the object in the image is a 3D sphere:
 
+![image](https://user-images.githubusercontent.com/108275763/223721019-a44fd361-ceb9-4d83-8eba-6454a63b25b6.png)
+
+If we look at the image from a 2D perspective:
+
+![image](https://user-images.githubusercontent.com/108275763/223722525-1b92b11c-37b2-42ca-8daa-33b42389c9f7.png)
+
+We can see that we are rending rays from the camera and seeing if the rays collide with the sphere.
+
+Depending on the points of collisions, which have coordinates of their own, we will set the colour of the pixel that was 'hit' to a particular value. 
+
+## Section 2.4: How do we find the collision points?
