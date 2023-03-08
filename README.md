@@ -482,3 +482,97 @@ We can see that we are sending rays from the camera and seeing if the rays colli
 Depending on the points of collisions, which have coordinates of their own, we will set the colour of the pixel that was 'hit' to a particular value. 
 
 ## Section 2.4: How do we find the collision points?
+
+Suppose that we have a ray $a_{-3,-3} + b_{1,1} \cdot t$ and a circle $x^2 + y^2 + 2^2 = 0$, we can set up an equation to see where it collides.
+
+To start with, let us split up the ray by dimension:
+
+$$a_x + b_x \cdot t$$
+
+$$a_y + b_y \cdot t$$
+
+We are able to substitute these equations into $x$ and $y$ components of the circle:
+
+$$(a_x + b_x t)^2 + (a_y + b_y t)^2 - 4 = 0$$
+
+Let us expand the equation:
+
+$$(a_x + b_x t)(a_x + b_x t) + (a_y + b_y t)(a_y + b_y t) - 4 = 0$$
+
+$$= a_{x}^2 + 2 a_{x} b_{x} t + b_{x}^2 t^2 + a_{y}^2 + 2 a_{y} b_{y} t + b_{y}^2 t^2 - 4 = 0$$
+
+## Section 2.5: Quadratic equations
+
+We want to solve for $t$, and we can do this by using the quadratic equation $ax^2 + bx + c = 0$.
+
+We can rearrange the equation to express in terms of $t$:
+
+$$(b_x^2 +b_y^2)t^2 + (2a_xb_x + 2a_yb_y)t + (a_x^2 + a_y^2 - 4) = 0$$
+
+We know all values except for $t$:
+
+$b_x$ and $b_y$ is the directional vector of the ray. <br>
+$a_x$ and $a_y$ is the origin of the ray.
+
+As such we can simply substitute the values:
+
+$a=(-3,-3)$ <br>
+$b=(1,1)$
+
+$$(1^2 + 1^2)t^2 + (2(-3)(1) + 2(-3)(1))t + ((-3)^2 + (-3)^2 -4) = 0$$
+
+$$2t^2 - 12t + 14$$
+
+## Section 2.6 Solving the equation
+
+We can solve the equation using the quadratic formula:
+
+$$x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$$
+
+Our values are:
+
+$a=2$ <br>
+$b=-12$ <br>
+$c=14$
+
+## Section 2.7 Using the discriminant
+
+We can use the discriminant $\sqrt{b^2 - 4ac}$ to tell us if there are any solutions and how many solutions there are. Substituting our values into the discriminant and we get:
+
+$$\sqrt{(-12)^2 - 4(2)(14)}$$
+
+$$144 - 112 = 32$$
+
+If we get a value $>0$, then we have 2 solutions. <br> 
+If we get a value $=0$, we have 1 solution. <br>
+If we get a value $<0$, we have 0 solutions. <br>
+
+## Section 2.8 Finding exact intersection points
+
+$$\frac{-b \pm \sqrt{32}}{2a}$$
+
+$$= \frac{-(-12) \pm \sqrt{32}}{2(2)}$$
+
+$$= \frac{12 \pm 5.66}{4}$$
+
+$$t = 4.415, 1.585$$
+
+We know know how far along the ray the intersections took place:
+
+![image](https://user-images.githubusercontent.com/108275763/223733395-66e29afb-7b79-4eb1-af60-0071954c2e74.png)
+
+We can plug in these values into our parametric equations:
+
+$a_x +b_x t$ <br> 
+$a_y +b_y t$ <br>
+
+Since the $x$ and $y$ have the same values, we only have to substitute once.
+
+$-3 + 1(1.585) = (-1.415,-1.415)$ <br>
+$-3 + 1(4.415) = (1.415,1.415)$
+
+The answer is correct compared to Desmos:
+
+![image](https://user-images.githubusercontent.com/108275763/223718246-f25fae88-402c-4188-b675-22329abcd6ac.png)
+
+There is a rounding error because we approximated $\sqrt{32}$ as $5.66$.
