@@ -477,7 +477,7 @@ If we look at the image from a 2D perspective:
 
 ![image](https://user-images.githubusercontent.com/108275763/223722525-1b92b11c-37b2-42ca-8daa-33b42389c9f7.png)
 
-We can see that we are rending rays from the camera and seeing if the rays collide with the sphere.
+We can see that we are sending rays from the camera and seeing if the rays collide with the sphere.
 
 Depending on the points of collisions, which have coordinates of their own, we will set the colour of the pixel that was 'hit' to a particular value. 
 
