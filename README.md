@@ -547,6 +547,8 @@ When you square something, there are two solutions to a square root:
 
 $$\sqrt{4}=2$$
 
+$$\sqrt{4}=-2$$
+
 We know that:
 
 $$2^2 = 4$$
@@ -691,105 +693,4 @@ There is a rounding error because we approximated $\sqrt{32}$ as $5.66$.
 
 # Section 3: Rendering a Sphere Using Ray Tracing
 
-We will be taking the mathematical concepts in section 2 and impleenting them in code in this section.
-
-To start, we will be making two new files:
-
-- `Renderer.h`
-- `Renderer.cpp`
-
-In `Renderer.h`, we will be declaring a class Renderer:
-
-```cpp
-#pragma once
-
-class Renderer
-{
-public:
-
-
-private:
-};
-```
-
-The purpose of this class is to input a scene description, for the 3D world that we are trying to render. The output would be an image which holds the pixels that the renderer has produced which describes that scene.
-
-For now we will have a default constructor:
-
-```cpp 
-Renderer() = default;
-```
-
-And a function Render, which will render every pixel in the scene:
-
-```cpp
-void Render();
-```
-
-```cpp
-void Renderer::Render()
-{
-	// render every pixel 
-}
-```
-
-The target of this render function is to be an actual image, so we will have to add `#include "Walnut/Image.h"`.
-
-We will be moving the image we created in `WalnutApp.cpp` into `Renderer.h` like so:
-
-```cpp
-#pragma once
-
-#include "Walnut/Image.h" // for Render()
-#include <memory> // for shared pointers
-
-class Renderer
-{
-public:
-	Renderer() = default;
-
-	void Render(); // renders every pixel 
-private:
-	std::shared_ptr<Walnut::Image>m_Image;
-};
-```
-
-Recall the `Render()` function in `WalnutApp.cpp`.
-
-Before we render, we checked to see if the image dimensions are the same as the viewport dimensions. If they are not, then it will create a new image with the same dimensions as the viewport. 
-
-Let us split this into another function `OnResize()` which takes a width and height:
-
-```cpp
-void OnResize(uint32_t width, uint32_t height);
-```
-
-Walnut has a function `Resize()`:
-
-```cpp
-void Image::Resize(uint32_t width, uint32_t height)
-{
-	if (m_Image && m_Width == width && m_Height == height)
-		return;
-
-	// TODO: max size?
-
-	m_Width = width;
-	m_Height = height;
-
-	Release();
-	AllocateMemory(m_Width * m_Height * Utils::BytesPerPixel(m_Format));
-}
-```
-
-This checks if the image needs resizing, and if so, then it releases and reallocates the memory of the image.
-
-In the `Render()` function, we want to call `Resize()` and then we can render.
-
-We also had a CPU side buffer for the image data which we need to put in the class:
-
-```cpp
-uint32_t* m_ImageData = nullptr;
-```
-
-
+Hello
