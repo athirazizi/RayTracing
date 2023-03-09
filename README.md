@@ -332,6 +332,118 @@ We can render this image every frame by adding `Render()` into the end of `OnUIR
 
 ![RayTracing_a3vckzBqnp](https://user-images.githubusercontent.com/108275763/223695777-e1fd89c9-bffa-4efe-a462-7c502fb904ee.gif)
 
+At this point, the code should look like this:
+
+```cpp
+#include "Walnut/Application.h"
+#include "Walnut/EntryPoint.h"
+
+#include "Walnut/Image.h"
+#include "Walnut/Random.h"
+#include "Walnut/Timer.h"
+
+
+using namespace Walnut;
+
+class ExampleLayer : public Walnut::Layer
+{
+public:
+	virtual void OnUIRender() override
+	{
+		ImGui::Begin("Settings");
+
+		ImGui::Text("Last render: %.3fms", m_LastRenderTime);
+
+		if (ImGui::Button("Render"))
+		{
+			// this renders every frame.
+			Render();
+		}
+
+		ImGui::End();
+
+		// gets rid of border around the viewport
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+		// this is the camera
+		ImGui::Begin("Viewport");
+		
+		// these are float values
+		m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
+		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
+		
+		if (m_Image)
+		{
+			// if there is an image, then display the image
+			ImGui::Image(m_Image->GetDescriptorSet(), { (float)m_Image->GetWidth(), (float)m_Image->GetHeight() });
+		}
+
+		ImGui::End();
+		ImGui::PopStyleVar();
+
+		Render();
+	}
+
+	void Render() 
+	{
+		Timer timer;
+
+		// create an image if there is no image
+		// or if the viewport lengths are not the same as the image lengths
+		if (!m_Image || m_ViewportWidth != m_Image->GetWidth() || m_ViewportHeight != m_Image->GetHeight()) 
+		{
+			m_Image = std::make_shared<Image>(m_ViewportWidth, m_ViewportHeight, ImageFormat::RGBA);
+			
+			// delete the old image data
+			delete[] m_ImageData;
+
+			// reallocate the image data
+			m_ImageData = new uint32_t[m_ViewportWidth * m_ViewportHeight];
+		}
+
+		for (uint32_t i = 0; i < m_ViewportWidth * m_ViewportHeight; i++)
+		{
+			m_ImageData[i] = Random::UInt();
+			m_ImageData[i] |= 0xff000000;
+		}
+
+		// set data, which uploads to the GPU
+		m_Image->SetData(m_ImageData);
+
+		m_LastRenderTime = timer.ElapsedMillis();
+	}
+
+private:
+	// this is the image
+	std::shared_ptr<Image>m_Image;
+	// buffer for image data
+	uint32_t* m_ImageData = nullptr;
+	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
+	float m_LastRenderTime = 0.0f;
+};
+
+Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
+{
+	Walnut::ApplicationSpecification spec;
+	spec.Name = "RayTracing";
+
+	Walnut::Application* app = new Walnut::Application(spec);
+	app->PushLayer<ExampleLayer>();
+	app->SetMenubarCallback([app]()
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Exit"))
+			{
+				app->Close();
+			}
+			ImGui::EndMenu();
+		}
+	});
+	return app;	
+}
+```
+
 # Section 2: Rays, Sphere, and Mathematics
 
 The first goal in this section is to render a sphere. 
@@ -579,4 +691,105 @@ There is a rounding error because we approximated $\sqrt{32}$ as $5.66$.
 
 # Section 3: Rendering a Sphere Using Ray Tracing
 
-Hello
+We will be taking the mathematical concepts in section 2 and impleenting them in code in this section.
+
+To start, we will be making two new files:
+
+- `Renderer.h`
+- `Renderer.cpp`
+
+In `Renderer.h`, we will be declaring a class Renderer:
+
+```cpp
+#pragma once
+
+class Renderer
+{
+public:
+
+
+private:
+};
+```
+
+The purpose of this class is to input a scene description, for the 3D world that we are trying to render. The output would be an image which holds the pixels that the renderer has produced which describes that scene.
+
+For now we will have a default constructor:
+
+```cpp 
+Renderer() = default;
+```
+
+And a function Render, which will render every pixel in the scene:
+
+```cpp
+void Render();
+```
+
+```cpp
+void Renderer::Render()
+{
+	// render every pixel 
+}
+```
+
+The target of this render function is to be an actual image, so we will have to add `#include "Walnut/Image.h"`.
+
+We will be moving the image we created in `WalnutApp.cpp` into `Renderer.h` like so:
+
+```cpp
+#pragma once
+
+#include "Walnut/Image.h" // for Render()
+#include <memory> // for shared pointers
+
+class Renderer
+{
+public:
+	Renderer() = default;
+
+	void Render(); // renders every pixel 
+private:
+	std::shared_ptr<Walnut::Image>m_Image;
+};
+```
+
+Recall the `Render()` function in `WalnutApp.cpp`.
+
+Before we render, we checked to see if the image dimensions are the same as the viewport dimensions. If they are not, then it will create a new image with the same dimensions as the viewport. 
+
+Let us split this into another function `OnResize()` which takes a width and height:
+
+```cpp
+void OnResize(uint32_t width, uint32_t height);
+```
+
+Walnut has a function `Resize()`:
+
+```cpp
+void Image::Resize(uint32_t width, uint32_t height)
+{
+	if (m_Image && m_Width == width && m_Height == height)
+		return;
+
+	// TODO: max size?
+
+	m_Width = width;
+	m_Height = height;
+
+	Release();
+	AllocateMemory(m_Width * m_Height * Utils::BytesPerPixel(m_Format));
+}
+```
+
+This checks if the image needs resizing, and if so, then it releases and reallocates the memory of the image.
+
+In the `Render()` function, we want to call `Resize()` and then we can render.
+
+We also had a CPU side buffer for the image data which we need to put in the class:
+
+```cpp
+uint32_t* m_ImageData = nullptr;
+```
+
+
