@@ -711,7 +711,7 @@ private:
 };
 ```
 
-The purpose of this class is to input a scene description, for the 3D world that we are trying to render. The output would be an image which holds the pixels that the renderer has produced which describes that scene.
+The purpose of this class is to input a scene description, for the 3D world that we are trying to render. The output is an image which holds the pixels that the renderer has produced which describes that scene.
 
 For now we will have a default constructor:
 
