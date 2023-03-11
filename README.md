@@ -837,21 +837,18 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 		m_FinalImage = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
 	}
 
-	// delete and reallocate the data
 	delete[] m_ImageData;
 	m_ImageData = new uint32_t[width * height];
 }
 
 void Renderer::Render()
 {
-	// render every pixel 
-	for (uint32_t i = 0; i < m_FinalImage->GetWidth() * m_FinalImage->GetWidth(); i++)
+	for (uint32_t i = 0; i < m_FinalImage->GetWidth() * m_FinalImage->GetHeight(); i++)
 	{
 		m_ImageData[i] = Walnut::Random::UInt();
 		m_ImageData[i] |= 0xff000000;
 	}
 
-	// set data, which uploads to the GPU
 	m_FinalImage->SetData(m_ImageData);
 }
 ```
@@ -949,10 +946,12 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 	return app;	
 }
 ```
+![RayTracing_53vDX6V4SI](https://user-images.githubusercontent.com/108275763/224484548-68710aa0-b839-4913-8181-b63542869e4c.gif)
 
 ## Section 3.2: Structuring our code to work like a pixel fragment/shader
 
 - What are pixel shaders?
+
 These are GPU programs that will run for every pixel of an image that we are rendering. 
 
 For example when triangles get rasterised, every pixel that gets generated as a result of that rasterisation process will invoke an instance of this pixel shader. We will be writing a pixel shader in C++.
