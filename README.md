@@ -948,6 +948,8 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 ```
 ![RayTracing_53vDX6V4SI](https://user-images.githubusercontent.com/108275763/224484548-68710aa0-b839-4913-8181-b63542869e4c.gif)
 
+We have now successfully refactored the program.
+
 ## Section 3.2: Structuring our code to work like a pixel fragment/shader
 
 - What are pixel shaders?
