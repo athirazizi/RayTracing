@@ -784,3 +784,6 @@ We also had a CPU side buffer for the image data which we need to put in the cla
 ```cpp
 uint32_t* m_ImageData = nullptr;
 ```
+
+We will make another function `GetFinalImage()` which returns the final image.
+
