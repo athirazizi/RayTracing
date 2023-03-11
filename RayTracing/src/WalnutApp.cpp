@@ -35,10 +35,12 @@ public:
 		m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
 		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
 		
-		if (m_Image)
+		auto image = m_Renderer.GetFinalImage();
+
+		if (image)
 		{
 			// if there is an image, then display the image
-			ImGui::Image(m_Image->GetDescriptorSet(), { (float)m_Image->GetWidth(), (float)m_Image->GetHeight() });
+			ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() });
 		
 		}
 
@@ -55,15 +57,12 @@ public:
 		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
 		m_Renderer.Render();
 
-
-
 		m_LastRenderTime = timer.ElapsedMillis();
 	}
 
 private:
 	Renderer m_Renderer;
 	// buffer for image data
-	uint32_t* m_ImageData = nullptr;
 	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 	float m_LastRenderTime = 0.0f;
 };

@@ -4,17 +4,17 @@
 
 void Renderer::OnResize(uint32_t width, uint32_t height)
 {
-	if (!m_Image)
+	if (m_FinalImage)
 	{
 		// No resize necessary
-		if (m_Image->GetWidth() == width && m_Image->GetHeight() == height)
+		if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height)
 			return;
 
-		m_Image->Resize(width, height);
+		m_FinalImage->Resize(width, height);
 	}
 	else
 	{
-		m_Image = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
+		m_FinalImage = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
 	}
 
 	// delete and reallocate the data
