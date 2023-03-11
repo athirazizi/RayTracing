@@ -693,7 +693,9 @@ There is a rounding error because we approximated $\sqrt{32}$ as $5.66$.
 
 # Section 3: Rendering a Sphere Using Ray Tracing
 
-We will be taking the mathematical concepts in section 2 and impleenting them in code in this section.
+We will be taking the mathematical concepts in section 2 and implementing them in code in this section.
+
+## Section 3.1: Creating a Renderer class
 
 To start, we will be making two new files:
 
@@ -787,3 +789,243 @@ uint32_t* m_ImageData = nullptr;
 
 We will make another function `GetFinalImage()` which returns the final image.
 
+At this point the code should look like this:
+
+`Renderer.h`
+
+```cpp
+#pragma once
+
+#include "Walnut/Image.h" // for Render()
+
+#include <memory> // for shared pointers
+
+class Renderer
+{
+public:
+	Renderer() = default;
+
+	void OnResize(uint32_t width, uint32_t height);
+	void Render(); // renders every pixel 
+
+	std::shared_ptr<Walnut::Image>GetFinalImage() const { return m_FinalImage; }
+private:
+	std::shared_ptr<Walnut::Image>m_FinalImage;
+	uint32_t* m_ImageData = nullptr;
+};
+```
+
+`Renderer.cpp`
+
+```cpp
+#include "Renderer.h"
+
+#include "Walnut/Random.h"
+
+void Renderer::OnResize(uint32_t width, uint32_t height)
+{
+	if (m_FinalImage)
+	{
+		// No resize necessary
+		if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height)
+			return;
+
+		m_FinalImage->Resize(width, height);
+	}
+	else
+	{
+		m_FinalImage = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
+	}
+
+	// delete and reallocate the data
+	delete[] m_ImageData;
+	m_ImageData = new uint32_t[width * height];
+}
+
+void Renderer::Render()
+{
+	// render every pixel 
+	for (uint32_t i = 0; i < m_FinalImage->GetWidth() * m_FinalImage->GetWidth(); i++)
+	{
+		m_ImageData[i] = Walnut::Random::UInt();
+		m_ImageData[i] |= 0xff000000;
+	}
+
+	// set data, which uploads to the GPU
+	m_FinalImage->SetData(m_ImageData);
+}
+```
+
+`WalnutApp.cpp`
+
+```cpp
+#include "Walnut/Application.h"
+#include "Walnut/EntryPoint.h"
+
+#include "Walnut/Image.h"
+#include "Walnut/Timer.h"
+
+#include "Renderer.h"
+
+using namespace Walnut;
+
+class ExampleLayer : public Walnut::Layer
+{
+public:
+	virtual void OnUIRender() override
+	{
+		ImGui::Begin("Settings");
+
+		ImGui::Text("Last render: %.3fms", m_LastRenderTime);
+
+		if (ImGui::Button("Render"))
+		{
+			// this renders every frame.
+			Render();
+		}
+
+		ImGui::End();
+
+		// gets rid of border around the viewport
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+		// this is the camera
+		ImGui::Begin("Viewport");
+		
+		// these are float values
+		m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
+		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
+		
+		auto image = m_Renderer.GetFinalImage();
+
+		if (image)
+		{
+			// if there is an image, then display the image
+			ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() });
+		
+		}
+
+		ImGui::End();
+		ImGui::PopStyleVar();
+
+		Render();
+	}
+
+	void Render() 
+	{
+		Timer timer;
+
+		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
+		m_Renderer.Render();
+
+		m_LastRenderTime = timer.ElapsedMillis();
+	}
+
+private:
+	Renderer m_Renderer;
+	// buffer for image data
+	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
+	float m_LastRenderTime = 0.0f;
+};
+
+Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
+{
+	Walnut::ApplicationSpecification spec;
+	spec.Name = "RayTracing";
+
+	Walnut::Application* app = new Walnut::Application(spec);
+	app->PushLayer<ExampleLayer>();
+	app->SetMenubarCallback([app]()
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Exit"))
+			{
+				app->Close();
+			}
+			ImGui::EndMenu();
+		}
+	});
+	return app;	
+}
+```
+
+## Section 3.2: Structuring our code to work like a pixel fragment/shader
+
+- What are pixel shaders?
+These are GPU programs that will run for every pixel of an image that we are rendering. 
+
+For example when triangles get rasterised, every pixel that gets generated as a result of that rasterisation process will invoke an instance of this pixel shader. We will be writing a pixel shader in C++.
+
+A great example of this is [Shadertoy](https://www.shadertoy.com/new):
+
+![firefox_558jn7S5rH](https://user-images.githubusercontent.com/108275763/224481367-ef20e588-9f3f-41c0-9a40-3addcf1dafbb.gif)
+
+Here, you can write a pixel shader and it will be rendered in real time. 
+
+The code below gets invoked for every pixel of the viewport:
+
+```cpp
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = fragCoord/iResolution.xy;
+
+    // Time varying pixel color
+    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
+
+    // Output to screen
+    fragColor = vec4(col,1.0);
+}
+```
+
+To explain it in a simpler, way:
+
+```cpp
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 uv = fragCoord/iResolution.xy;
+    fragColor = vec4(uv,0.0,1.0);
+}
+```
+
+![image](https://user-images.githubusercontent.com/108275763/224481534-179de138-258e-4dbd-af2b-a3329125cac6.png)
+
+The value between $0$ and $1$ across the $x$ axis is being displayed as the red channel, and from $0$ to $1$ across the $y$ axis is being displayed as the green channel.
+
+Let us try to implement this in our code. We will make a function `PerPixel()`. It returns a uint_32t value and has a vec2 parameter which takes in coordinates.
+
+```cpp
+uint32_t PerPixel(glm::vec2 coord);
+```
+
+Coming back to the code in Shadertoy:
+
+```cpp
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 uv = fragCoord/iResolution.xy;
+    fragColor = vec4(uv,0.0,1.0);
+}
+```
+
+`fragCoord` is a pixel coordinate in pixel space. So in a resolution of 1280x720, a coordinate could be 600x500. The division `fragCoord/iResolution.xy` maps the value to a range from $0$ to $1$. 
+
+Let us modify the `Render()` to contain two for loops, for $x$ and $y$ coordinates:
+
+```cpp
+for (uint32_t y = 0; y < m_FinalImage->GetWidth(); y++)
+{
+	for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
+	{
+		PerPixel();
+
+		m_ImageData[i] = Walnut::Random::UInt();
+		m_ImageData[i] |= 0xff000000;
+	}
+}
+```
+
+The reason we iterate the $y$ axis in the outer loop is because we want to be more friendly with the CPU cache:
+- as we go 1 uint32_t forwards we are going horizontally across the image
+- if we iterated the $x$ axis in the outer loop we would be skipping a portion of memory by going a full row forwards and this will slow down our program because the CPU cannot fetch the memory as easily.
