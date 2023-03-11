@@ -25,12 +25,12 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 void Renderer::Render()
 {
 	// render every pixel 
-	for (uint32_t i = 0; i < m_FinalImage->GetWidth() * m_FinalImage->GetWidth())
+	for (uint32_t i = 0; i < m_FinalImage->GetWidth() * m_FinalImage->GetWidth(); i++)
 	{
 		m_ImageData[i] = Walnut::Random::UInt();
 		m_ImageData[i] |= 0xff000000;
 	}
 
 	// set data, which uploads to the GPU
-	m_Image->SetData(m_ImageData);
+	m_FinalImage->SetData(m_ImageData);
 }
