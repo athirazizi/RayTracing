@@ -787,3 +787,165 @@ uint32_t* m_ImageData = nullptr;
 
 We will make another function `GetFinalImage()` which returns the final image.
 
+At this point the code should look like this:
+
+`Renderer.h`
+
+```cpp
+#pragma once
+
+#include "Walnut/Image.h" // for Render()
+
+#include <memory> // for shared pointers
+
+class Renderer
+{
+public:
+	Renderer() = default;
+
+	void OnResize(uint32_t width, uint32_t height);
+	void Render(); // renders every pixel 
+
+	std::shared_ptr<Walnut::Image>GetFinalImage() const { return m_FinalImage; }
+private:
+	std::shared_ptr<Walnut::Image>m_FinalImage;
+	uint32_t* m_ImageData = nullptr;
+};
+```
+
+`Renderer.cpp`
+
+```cpp
+#include "Renderer.h"
+
+#include "Walnut/Random.h"
+
+void Renderer::OnResize(uint32_t width, uint32_t height)
+{
+	if (m_FinalImage)
+	{
+		// No resize necessary
+		if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height)
+			return;
+
+		m_FinalImage->Resize(width, height);
+	}
+	else
+	{
+		m_FinalImage = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
+	}
+
+	// delete and reallocate the data
+	delete[] m_ImageData;
+	m_ImageData = new uint32_t[width * height];
+}
+
+void Renderer::Render()
+{
+	// render every pixel 
+	for (uint32_t i = 0; i < m_FinalImage->GetWidth() * m_FinalImage->GetWidth(); i++)
+	{
+		m_ImageData[i] = Walnut::Random::UInt();
+		m_ImageData[i] |= 0xff000000;
+	}
+
+	// set data, which uploads to the GPU
+	m_FinalImage->SetData(m_ImageData);
+}
+```
+
+`WalnutApp.cpp`
+
+```cpp
+#include "Walnut/Application.h"
+#include "Walnut/EntryPoint.h"
+
+#include "Walnut/Image.h"
+#include "Walnut/Timer.h"
+
+#include "Renderer.h"
+
+using namespace Walnut;
+
+class ExampleLayer : public Walnut::Layer
+{
+public:
+	virtual void OnUIRender() override
+	{
+		ImGui::Begin("Settings");
+
+		ImGui::Text("Last render: %.3fms", m_LastRenderTime);
+
+		if (ImGui::Button("Render"))
+		{
+			// this renders every frame.
+			Render();
+		}
+
+		ImGui::End();
+
+		// gets rid of border around the viewport
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+		// this is the camera
+		ImGui::Begin("Viewport");
+		
+		// these are float values
+		m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
+		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
+		
+		auto image = m_Renderer.GetFinalImage();
+
+		if (image)
+		{
+			// if there is an image, then display the image
+			ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() });
+		
+		}
+
+		ImGui::End();
+		ImGui::PopStyleVar();
+
+		Render();
+	}
+
+	void Render() 
+	{
+		Timer timer;
+
+		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
+		m_Renderer.Render();
+
+		m_LastRenderTime = timer.ElapsedMillis();
+	}
+
+private:
+	Renderer m_Renderer;
+	// buffer for image data
+	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
+	float m_LastRenderTime = 0.0f;
+};
+
+Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
+{
+	Walnut::ApplicationSpecification spec;
+	spec.Name = "RayTracing";
+
+	Walnut::Application* app = new Walnut::Application(spec);
+	app->PushLayer<ExampleLayer>();
+	app->SetMenubarCallback([app]()
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Exit"))
+			{
+				app->Close();
+			}
+			ImGui::EndMenu();
+		}
+	});
+	return app;	
+}
+```
+
+
