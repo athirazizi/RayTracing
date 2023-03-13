@@ -1015,7 +1015,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 Let us modify the `Render()` to contain two for loops, for $x$ and $y$ coordinates:
 
 ```cpp
-for (uint32_t y = 0; y < m_FinalImage->GetWidth(); y++)
+for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
 {
 	for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
 	{
