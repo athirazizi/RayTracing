@@ -1100,4 +1100,534 @@ We can also check the `OnResize()` function here:
 
 This coordinate system and the `PerPixel()` function is what we will be using to decide where to shoot our rays from the camera to see if they intersect with our sphere.
 
-## Section 3.3: Rendering there sphere
+The code at this point looks like this:
+
+`Renderer.h`
+```cpp
+#pragma once
+
+#include "Walnut/Image.h"
+
+#include <memory>
+#include <glm/glm.hpp>
+
+class Renderer
+{
+public:
+	Renderer() = default;
+
+	void OnResize(uint32_t width, uint32_t height);
+	void Render();
+
+	std::shared_ptr<Walnut::Image> GetFinalImage() const { return m_FinalImage; }
+private:
+	uint32_t PerPixel(glm::vec2 coord);
+private:
+	std::shared_ptr<Walnut::Image> m_FinalImage;
+	uint32_t* m_ImageData = nullptr;
+};
+```
+
+`Renderer.cpp`
+```cpp
+#include "Renderer.h"
+
+#include "Walnut/Random.h"
+
+void Renderer::OnResize(uint32_t width, uint32_t height)
+{
+	if (m_FinalImage)
+	{
+		// No resize necessary
+		if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height)
+			return;
+
+		m_FinalImage->Resize(width, height);
+	}
+	else
+	{
+		m_FinalImage = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
+	}
+
+	delete[] m_ImageData;
+	m_ImageData = new uint32_t[width * height];
+}
+
+void Renderer::Render()
+{
+	for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
+	{
+		for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
+		{
+			// assign a coordinate
+			glm::vec2 coord = { (float)x / (float)m_FinalImage->GetWidth(), (float)y / (float)m_FinalImage->GetHeight() };
+
+			// set the pixel colour to each pixel
+			m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
+		}
+	}
+
+	m_FinalImage->SetData(m_ImageData);
+}
+
+uint32_t Renderer::PerPixel(glm::vec2 coord)
+{
+	uint8_t r = (uint8_t)(coord.x * 255.0f);
+	uint8_t g = (uint8_t)(coord.y * 255.0f);
+	return 0xff000000 | (g << 8) | r;
+}
+
+```
+
+`WalnutApp.cpp`
+```cpp
+#include "Walnut/Application.h"
+#include "Walnut/EntryPoint.h"
+
+#include "Walnut/Image.h"
+#include "Walnut/Timer.h"
+
+#include "Renderer.h"
+
+using namespace Walnut;
+
+class ExampleLayer : public Walnut::Layer
+{
+public:
+	virtual void OnUIRender() override
+	{
+		ImGui::Begin("Settings");
+
+		ImGui::Text("Last render: %.3fms", m_LastRenderTime);
+
+		if (ImGui::Button("Render"))
+		{
+			// this renders every frame.
+			Render();
+		}
+
+		ImGui::End();
+
+		// gets rid of border around the viewport
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+		// this is the camera
+		ImGui::Begin("Viewport");
+		
+		// these are float values
+		m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
+		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
+		
+		auto image = m_Renderer.GetFinalImage();
+
+		if (image)
+		{
+			// if there is an image, then display the image
+			ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() },
+				ImVec2(0, 1), ImVec2(1, 0));
+		}
+
+		ImGui::End();
+		ImGui::PopStyleVar();
+
+		Render();
+	}
+
+	void Render() 
+	{
+		Timer timer;
+
+		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
+		m_Renderer.Render();
+
+		m_LastRenderTime = timer.ElapsedMillis();
+	}
+
+private:
+	Renderer m_Renderer;
+	// buffer for image data
+	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
+	float m_LastRenderTime = 0.0f;
+};
+
+Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
+{
+	Walnut::ApplicationSpecification spec;
+	spec.Name = "RayTracing";
+
+	Walnut::Application* app = new Walnut::Application(spec);
+	app->PushLayer<ExampleLayer>();
+	app->SetMenubarCallback([app]()
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Exit"))
+			{
+				app->Close();
+			}
+			ImGui::EndMenu();
+		}
+	});
+	return app;	
+}
+```
+
+## Section 3.3: Rendering the sphere
+
+Let's attempt to write code using the mathematics in Section 2. Recall that we've done the maths in 2D, but here we will be implementing it in 3D. As such, we have to add an extra $z$ axis to our equations to account for the $z$ dimension.
+
+The quadratic equation for $t$ was:
+$$(b_x^2 +b_y^2)t^2 + (2a_xb_x + 2a_yb_y)t + (a_x^2 + a_y^2 - 4) = 0$$
+
+We can simplify the equation further:
+$$(b_x^2 +b_y^2)t^2 + (2(a_xb_x + a_yb_y))t + (a_x^2 + a_y^2 - r^2) = 0$$
+
+$t$ is what we are solving for, which is the distance along that ray. The unknown variables that we have are $a$ and $b$ and $r$.
+
+```cpp
+// (bx^2 + by^2)t^2 + (2(axbx + ayby))t + (ax^2 + ay^2 - r^2) = 0
+// where
+// a = ray origin
+// b = ray direction
+// r = radius
+// t = hit distance
+```
+
+We will name the variables `a`, `b`, and `c` because that is how they appear in the quadratic formula.
+
+$$x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$$
+
+Recall that $a$, $b$, and $c$ are the coefficients of the quadratic equation.
+
+Suppose that we have a camera at $(0,0,0)$. All we have to do to calculate a ray per pixel is by using the coordinate that we have. The current setup we have for the coordinate is that it goes from $(0,0)$ to $(1,1)$. If we are using this as the direction, we would only shoot out our rays like so:
+
+![image](https://user-images.githubusercontent.com/108275763/226182672-99733608-fd60-4202-a526-64aa4656ff56.png)
+
+We can remap the coordiantes to go from $-1$ to $1$ rather than $0$ to $1$:
+
+```cpp
+// remap to -1 -> 1
+coord = coord * 2.0f - 1.0f; 
+```
+
+We've done this before in the Algorithms module, where the output is refactored into a different scale.
+
+```cpp
+float a = coord.x * coord.x + coord.y * coord.y + coord.z * coord.z;
+```
+
+Currently, the coordinate is of data type vec2.
+
+- How do we deal with this?
+
+Let us reimagine the ray tracing scene again, except this time, the $y$ axis is flipped $90\degree$:
+
+![image](https://user-images.githubusercontent.com/108275763/226183557-d6ad7dee-b986-4680-8aa5-c60687c82c8a.png)
+
+We want the scene to have some sort of depth to it, so we will add a `z` coordinate with a range of $-1$ to $1$.
+
+We will use $-1$ for now (OpenGL treats this as the forward direction), though it depends on if you are dealing with a left handed coordinate system or a right handed system.
+
+```cpp
+glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
+```
+
+If we want this as a unit vector, we can normalise it:
+
+```cpp
+rayDirection = glm::normalize(rayDirection);
+```
+
+```cpp
+float a = rayDirection.x * rayDirection.x + rayDirection.y * rayDirection.y + rayDirection.z * rayDirection.z;
+```
+
+This is actually the dot product of the ray direction with itself. We are multiplying each term by itself and adding up the value to a float. We can rewrite this like so:
+
+```cpp
+float a = glm::dot(rayDirection, rayDirection);
+```
+
+Now we have our $a$ coefficient.
+
+$b$ is actually also a dot product, because we are multiplying each component of the ray origin and each component of the ray direction and adding them up:
+
+```cpp
+float b = 2.0f * glm::dot(rayOrigin, rayDirection);
+```
+
+Similarly, $c$ is a dot product of the ray origin and itself, minus the radius squared:
+
+```cpp
+float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
+```
+
+The implementation of the discriminant is seen below:
+
+```cpp
+// quadratic formula discriminant
+// b^2 - 4ac
+
+float discriminant = b * b - 4.0f * a * c;
+```
+
+We can now check if the ray hits the object depending on the value of the discriminant:
+
+Result | # Solutions
+--- | ---
+$>0$ | 2 Solutions
+$=0$ | 1 Solution
+$<0$ | 0 Solutions
+
+Here is an example:
+
+```cpp
+// > 0, 2 solutions
+// = 0, 1 solution
+// < 0, 0 solutions
+
+if (discriminant >= 0.0f)
+{
+	return 0xff00ff00;
+}
+
+return 0xff000000;
+```
+If we hit the sphere, we should see a green colour. Else, it is black.
+
+Hit F5 and we get:
+
+![image](https://user-images.githubusercontent.com/108275763/226185270-8f7efaad-3e8a-470d-a39f-4c9cd54fe5b9.png)
+
+It seems that we hit the sphere. Think of it this way:
+
+The ray origin is at $(0,0,0)$ and the sphere origin is also at $(0,0,0)$. To visualise, that looks like this:
+
+![image](https://user-images.githubusercontent.com/108275763/226185573-2e5bcbe3-abda-4210-b53b-f4ec853eb410.png)
+
+Essentially, the ray is inside the sphere, and the sphere is filling up the viewport. We can move the sphere back from the viewport by translating it in the $z$ axis such that it does not fill the camera viewport. 
+
+Alternatively, we could move the camera back:
+
+```cpp
+glm::vec3 rayOrigin(0.0f, 0.0f, -2.0f);
+```
+
+The result is:
+
+![image](https://user-images.githubusercontent.com/108275763/226185723-5938e105-856e-41b0-a92a-151e61d003b7.png)
+
+This visually looks like a circle, but it is actually a sphere in 3D space. It is hard to tell because of the flat lighting.
+
+Another problem is that when we resize the viewport, the circle gets stretched:
+
+![RayTracing_G0ssGR5DS5](https://user-images.githubusercontent.com/108275763/226185950-d3c6ddb0-527d-4279-a41b-300f3bc3a08f.gif)
+
+Currently there is no concept of aspect ratio in the code. We are still in the $-1$ to $1$ space, horizontally and vertically. We will fix this in the section.
+
+For now, the code looks like this:
+
+`Renderer.h`
+```cpp
+#pragma once
+
+#include "Walnut/Image.h"
+
+#include <memory>
+#include <glm/glm.hpp>
+
+class Renderer
+{
+public:
+	Renderer() = default;
+
+	void OnResize(uint32_t width, uint32_t height);
+	void Render();
+
+	std::shared_ptr<Walnut::Image> GetFinalImage() const { return m_FinalImage; }
+private:
+	uint32_t PerPixel(glm::vec2 coord);
+private:
+	std::shared_ptr<Walnut::Image> m_FinalImage;
+	uint32_t* m_ImageData = nullptr;
+};
+```
+
+
+`Renderer.cpp`
+```cpp
+#include "Renderer.h"
+
+#include "Walnut/Random.h"
+
+void Renderer::OnResize(uint32_t width, uint32_t height)
+{
+	if (m_FinalImage)
+	{
+		// No resize necessary
+		if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height)
+			return;
+
+		m_FinalImage->Resize(width, height);
+	}
+	else
+	{
+		m_FinalImage = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
+	}
+
+	delete[] m_ImageData;
+	m_ImageData = new uint32_t[width * height];
+}
+
+void Renderer::Render()
+{
+	for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
+	{
+		for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
+		{
+			// assign a coordinate
+			glm::vec2 coord = { (float)x / (float)m_FinalImage->GetWidth(), (float)y / (float)m_FinalImage->GetHeight() };
+			// remap to -1 -> 1
+			coord = coord * 2.0f - 1.0f; 
+
+			// set the pixel colour to each pixel
+			m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
+		}
+	}
+
+	m_FinalImage->SetData(m_ImageData);
+}
+
+uint32_t Renderer::PerPixel(glm::vec2 coord)
+{
+	glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
+	glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
+	float radius = 0.5f;
+	// rayDirection = glm::normalize(rayDirection);
+
+	// (bx^2 + by^2)t^2 + (2(axbx + ayby))t + (ax^2 + ay^2 - r^2) = 0
+	// where
+	// a = ray origin
+	// b = ray direction
+	// r = radius
+	// t = hit distance
+
+	// float a = rayDirection.x * rayDirection.x + rayDirection.y * rayDirection.y + rayDirection.z * rayDirection.z;
+	float a = glm::dot(rayDirection, rayDirection);
+	float b = 2.0f * glm::dot(rayOrigin, rayDirection);
+	float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
+
+	// quadratic formula discriminant
+	// b^2 - 4ac
+
+	float discriminant = b * b - 4.0f * a * c;
+
+	// > 0, 2 solutions
+	// = 0, 1 solution
+	// < 0, 0 solutions
+
+	if (discriminant >= 0.0f)
+	{
+		return 0xff00ff00;
+	}
+
+	return 0xff000000;
+}
+
+```
+
+`WalnutApp.cpp`
+```cpp
+#include "Walnut/Application.h"
+#include "Walnut/EntryPoint.h"
+
+#include "Walnut/Image.h"
+#include "Walnut/Timer.h"
+
+#include "Renderer.h"
+
+using namespace Walnut;
+
+class ExampleLayer : public Walnut::Layer
+{
+public:
+	virtual void OnUIRender() override
+	{
+		ImGui::Begin("Settings");
+
+		ImGui::Text("Last render: %.3fms", m_LastRenderTime);
+
+		if (ImGui::Button("Render"))
+		{
+			// this renders every frame.
+			Render();
+		}
+
+		ImGui::End();
+
+		// gets rid of border around the viewport
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+		// this is the camera
+		ImGui::Begin("Viewport");
+		
+		// these are float values
+		m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
+		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
+		
+		auto image = m_Renderer.GetFinalImage();
+
+		if (image)
+		{
+			// if there is an image, then display the image
+			ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() },
+				ImVec2(0, 1), ImVec2(1, 0));
+		}
+
+		ImGui::End();
+		ImGui::PopStyleVar();
+
+		Render();
+	}
+
+	void Render() 
+	{
+		Timer timer;
+
+		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
+		m_Renderer.Render();
+
+		m_LastRenderTime = timer.ElapsedMillis();
+	}
+
+private:
+	Renderer m_Renderer;
+	// buffer for image data
+	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
+	float m_LastRenderTime = 0.0f;
+};
+
+Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
+{
+	Walnut::ApplicationSpecification spec;
+	spec.Name = "RayTracing";
+
+	Walnut::Application* app = new Walnut::Application(spec);
+	app->PushLayer<ExampleLayer>();
+	app->SetMenubarCallback([app]()
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Exit"))
+			{
+				app->Close();
+			}
+			ImGui::EndMenu();
+		}
+	});
+	return app;	
+}
+```
+
+# Section 4: Ray casting and sphere intersection
+
