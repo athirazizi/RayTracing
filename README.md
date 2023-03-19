@@ -1027,6 +1027,77 @@ for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
 }
 ```
 
-The reason we iterate the $y$ axis in the outer loop is because we want to be more friendly with the CPU cache:
+The reason we iterate the $y$ axis in the outer loop is because we want to be more friendly with the CPU cache (in terms of the layout of the buffer in memory):
 - as we go 1 uint32_t forwards we are going horizontally across the image
 - if we iterated the $x$ axis in the outer loop we would be skipping a portion of memory by going a full row forwards and this will slow down our program because the CPU cannot fetch the memory as easily.
+
+We can easily calculate what the coordinate should be in the nested for loop:
+
+```cpp
+glm::vec2 coord = { (float)x / (float)m_FinalImage->GetWidth(), (float)y / (float)m_FinalImage->GetHeight() };
+```
+
+The coordinate is `x` divided by the total width of the image, and `y` divided by the total height. <br> 
+We have to cast the variables as float to perform float division, if not, it will perform integer division.
+
+Then, we can set each pixel colour using the `PerPixel()` function at the appropriate location:
+
+```cpp
+m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
+```
+
+We are multiplying the $y$ coordinate by how large each row supposedly is.
+
+Now, it is the responsiblity of the `PerPixel()` function to provide some sort of colour. <br> For now, we will set each pixel to green:
+
+```cpp
+uint32_t Renderer::PerPixel(glm::vec2 coord)
+{
+	return 0xff00ff00;
+}
+```
+
+The result is:
+![image](https://user-images.githubusercontent.com/108275763/226174453-5257bcf3-7e46-4e28-8c9a-57b75145260b.png)
+
+Let's try to imitate the output of code we used in Shadertoy:
+
+```cpp
+uint32_t Renderer::PerPixel(glm::vec2 coord)
+{
+	uint8_t r = (uint8_t)coord.x * 255.0f;
+	uint8_t g = (uint8_t)coord.y * 255.0f;
+
+	return 0xff000000 | (g << 8) | r;
+}
+```
+
+Here we are setting the red channel to the `x` coordinate and green to the `y` coordinate.
+
+The result is:
+![image](https://user-images.githubusercontent.com/108275763/226175125-1ed5b48c-8e7e-48f4-b08e-cccbbdbc4b7f.png)
+
+The image is flipped upside down because of how ImGui displays the image. We have to add another parameter to `ImGui::Image` (the `uv0` and `uv1` parameters) as seen below:
+
+![image](https://user-images.githubusercontent.com/108275763/226175271-b43e3223-d393-4378-a7a3-c05ccb4bbb71.png)
+
+```cpp
+if (image)
+{
+	// if there is an image, then display the image
+	ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() },
+		ImVec2(0, 1), ImVec2(1, 0));
+}
+```
+
+We are reversing the `uv` coordinate of the $y$ axis. The `v` of the `uv` has now been inverted, and our image is now flipped right side up. <br> Run the program again and this is what we get:
+
+![image](https://user-images.githubusercontent.com/108275763/226175456-26bb06b1-2ac1-4f42-9e5b-8a3fb8caf0f1.png)
+
+We can also check the `OnResize()` function here:
+
+![RayTracing_dWHEgBvw9y](https://user-images.githubusercontent.com/108275763/226175514-0e13f6c4-0762-48a9-a195-b19c827e7855.gif)
+
+This coordinate system and the `PerPixel()` function is what we will be using to decide where to shoot our rays from the camera to see if they intersect with our sphere.
+
+## Section 3.3: Rendering there sphere
