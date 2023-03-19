@@ -29,6 +29,8 @@ void Renderer::Render()
 		{
 			// assign a coordinate
 			glm::vec2 coord = { (float)x / (float)m_FinalImage->GetWidth(), (float)y / (float)m_FinalImage->GetHeight() };
+			// remap to -1 -> 1
+			coord = coord * 2.0f - 1.0f; 
 
 			// set the pixel colour to each pixel
 			m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
@@ -40,8 +42,36 @@ void Renderer::Render()
 
 uint32_t Renderer::PerPixel(glm::vec2 coord)
 {
-	uint8_t r = (uint8_t)(coord.x * 255.0f);
-	uint8_t g = (uint8_t)(coord.y * 255.0f);
+	glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
+	glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
+	float radius = 0.5f;
+	// rayDirection = glm::normalize(rayDirection);
 
-	return 0xff000000 | (g << 8) | r;
+	// (bx^2 + by^2)t^2 + (2(axbx + ayby))t + (ax^2 + ay^2 - r^2) = 0
+	// where
+	// a = ray origin
+	// b = ray direction
+	// r = radius
+	// t = hit distance
+
+	// float a = rayDirection.x * rayDirection.x + rayDirection.y * rayDirection.y + rayDirection.z * rayDirection.z;
+	float a = glm::dot(rayDirection, rayDirection);
+	float b = 2.0f * glm::dot(rayOrigin, rayDirection);
+	float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
+
+	// quadratic formula discriminant
+	// b^2 - 4ac
+
+	float discriminant = b * b - 4.0f * a * c;
+
+	// > 0, 2 solutions
+	// = 0, 1 solution
+	// < 0, 0 solutions
+
+	if (discriminant >= 0.0f)
+	{
+		return 0xff00ff00;
+	}
+
+	return 0xff000000;
 }
