@@ -1691,3 +1691,88 @@ namespace Utils {
 
 ## Section 4.2: Calculating sphere hit coordinates
 
+Next, we want to implement the second half of the quadratic formula:
+
+$$\frac{-b\pm\sqrt{discriminant}}{2a}$$
+
+Let us rework the `PerPixel` function to return black if the discriminant is less than zero, else, continue to capture the sphere:
+
+```cpp
+if (discriminant < 0.0f)
+{
+	return glm::vec4(0, 0, 0, 1); // return black
+}
+
+glm::vec3 sphereColor(0, 1, 0);
+return glm::vec4(sphereColor, 1.0f);
+```
+
+Implementating the rest of the quadratic formula:
+
+```cpp
+float discriminant = b * b - 4.0f * a * c;
+
+// (-b +- sqrt(discriminant)) / 2a
+// 
+// > 0, 2 solutions
+// = 0, 1 solution
+// < 0, 0 solutions
+
+// plus variant
+float t0 = (-b + glm::sqrt(discriminant)) / (2.0f * a);
+// minus variant
+float t1 = (-b - glm::sqrt(discriminant)) / (2.0f * a);
+
+glm::vec3 h0 = rayOrigin + rayDirection * t0;
+glm::vec3 h1 = rayOrigin + rayDirection * t1;
+```
+
+## Section 4.3: Closest intersection point
+
+Recall that $t$ is the distance from the origin along the ray direction to our actual hit point. The smallest $t$ value would naturally be the closest intersection point. 
+
+In this case, `t1` would always be the lower value since we are subtracting $-b$ with the discriminant. Let's write this in code:
+
+```cpp
+float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
+
+glm::vec3 hitPoint = rayOrigin + rayDirection * closestT;
+
+glm::vec3 sphereColor(0, 1, 0);
+sphereColor = hitPoint;
+return glm::vec4(sphereColor, 1.0f);
+```
+
+The result is:
+![image](https://user-images.githubusercontent.com/108275763/233863574-1c20bce8-75a5-4f9e-8b94-4f880fc95d4e.png)
+
+The sphere now has some colour which shows depth. 
+
+![image](https://user-images.githubusercontent.com/108275763/233863993-eb49f541-cccc-407a-88f4-174438dad4fa.png)
+
+## Section 4.4: Using colour to visualise numbers
+
+In this case, $x$ and $y$ are negative set to $0$. $z$ is positive, and it is the blue colour that we are initialising. Recall that each hitpoint has an $x$, $y$, $z$ coordinate for every pixel. We are using those values and outputting them as a colour. Essentially:
+
+$$x=r$$
+
+$$y=b$$
+
+$$z=g$$
+
+Where each plane represents a colour channel.
+
+## Section 4.4: How lighting and shading works
+
+The easiest way to explain lighting and shading is by example:
+
+If the object is facing the light, its appearance is brighter.
+![image](https://user-images.githubusercontent.com/108275763/233867103-0783a83a-b8af-43f4-83e9-131c1aa9465d.png)
+
+If the object is not facing the light, its appearance is dimmer.
+![image](https://user-images.githubusercontent.com/108275763/233867108-bf6b3c18-5649-422a-890d-d90ef1511eb2.png)
+
+Light has different components such as intensity, colour, direction and a source. The final result of a scene with an object is dictated by the object's surface facing this light. The direction that each pixel faces towards the light has to be captured such that lighting can be rendered accordingly (surfaces facing the light appear brighter, else it is dimmer). 
+
+## Section 4.5: Calculating lighting using normal vectors
+
