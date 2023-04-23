@@ -1631,3 +1631,61 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 
 # Section 4: Ray casting and sphere intersection
 
+## Section 4.1: Using floats for colours
+
+Let us repurpose the `PerPixel` function to output a `glm::vec4` data type:
+```cpp
+glm::vec4 Renderer::PerPixel(glm::vec2 coord)
+
+if (discriminant >= 0.0f)
+{
+	return glm::vec4(0, 1, 0, 1); // this makes green (R, G, B, A)
+}
+
+return glm::vec4(0, 0, 0, 1); // this returns black
+```
+
+This makes the code more readable as we are consistently using the RGBA format.
+
+Now, we have to convert our `PerPixel` function to the RGBA format:
+![image](https://user-images.githubusercontent.com/108275763/233859470-6f7a9e26-360f-4788-b68f-9c498749c625.png)
+
+![image](https://user-images.githubusercontent.com/108275763/233859557-81520c49-4740-49e9-86f6-d6849e6a9819.png)
+
+We will have to make a function to convert the colour to the RGBA format.
+
+In a separate namespace the function is defined: 
+
+```cpp
+namespace Utils {
+	static uint32_t ConvertToRGBA(const glm::vec4& color)
+	{
+		color.r * 255.0f;
+	}
+}
+```
+
+Note that the color in each channel should be within the range of 0 to 1 to prevent 'spilling' out into other channels. Vulkan, DirectX, and OpenGL already does this for us, but since we have no graphics pipeline or GPU drivers, we have to code it ourselves.
+
+```cpp
+// clamp the range to 0 and 1
+color = glm::clamp(color, glm::vec4(0.0f), glm::vec4(1.0f));
+```
+
+```cpp
+namespace Utils {
+	static uint32_t ConvertToRGBA(const glm::vec4& color)
+	{
+		uint8_t r = color.r * 255.0f;
+		uint8_t g = color.g * 255.0f;
+		uint8_t b = color.b * 255.0f;
+		uint8_t a = color.a * 255.0f;
+
+		uint32_t result = (a << 24) | (b << 16) | (g << 8) | r;
+		return result;
+	}
+}
+
+![image](https://user-images.githubusercontent.com/108275763/233860146-a91f35e3-cfa5-4ceb-a3da-39bbfc751681.png)
+
+```
