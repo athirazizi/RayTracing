@@ -1685,7 +1685,6 @@ namespace Utils {
 		return result;
 	}
 }
+```
 
 ![image](https://user-images.githubusercontent.com/108275763/233860146-a91f35e3-cfa5-4ceb-a3da-39bbfc751681.png)
-
-```
