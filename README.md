@@ -1748,7 +1748,7 @@ The result is:
 
 The sphere now has some colour which shows depth. 
 
-![image](https://user-images.githubusercontent.com/108275763/233863993-eb49f541-cccc-407a-88f4-174438dad4fa.png)
+![image](https://user-images.githubusercontent.com/108275763/234369012-a3ed304f-5ab5-4f09-8118-5327ebc9e4c6.png)
 
 ## Section 4.4: Using colour to visualise numbers
 
@@ -1776,3 +1776,98 @@ Light has different components such as intensity, colour, direction and a source
 
 ## Section 4.5: Calculating lighting using normal vectors
 
+In this section, we want to determine, for each pixel, which direction it is facing. In other words, this is we want to calculate the normal (a vector perpendicular to the surface):
+
+![image](https://user-images.githubusercontent.com/108275763/234367075-26d50a3e-a99d-4aef-af50-bd34b19b1cc2.png)
+
+![image](https://user-images.githubusercontent.com/108275763/234367339-ec807699-1af5-4e14-a6ef-895639b16a55.png)
+
+We already know the position of the sphere's origin and the position of the hitpoints, we can subtract these two vectors. 
+
+Since our current sphere origin is $(0,0,0)$, we know that the hitpoint is the normal. We have to normalise this vector because the radius of the sphere affects the magnitude of the vector. Recall the size of the radius:
+
+```cpp
+float radius = 0.5f;
+```
+
+Consequently, the colours of the previously rendered sphere appears dark because the range is actually from 0 to 0.5. To find the normal we can use `glm::normalize`:
+
+```cpp
+glm::vec3 normal = glm::normalize(hitPoint);
+```
+
+Usually, we would subtract the sphere origin from the hitpoint. We will do this in a future section.
+
+Let us visualise the normal:
+
+```cpp
+glm::vec3 sphereColor(1, 0, 1);
+sphereColor = normal;
+return glm::vec4(sphereColor, 1.0f);	
+```
+
+The result is:
+
+![image](https://user-images.githubusercontent.com/108275763/234369929-605b22aa-1a42-4855-8a43-19831884cb68.png)
+
+After moving the camera one unit forward (towards the sphere):
+
+![image](https://user-images.githubusercontent.com/108275763/234370401-be18cd79-57ae-4aba-b858-7b4084343a3e.png)
+
+We are sending the rays towards the $-z$ direction. Therefore, the normal is facing towards the $+z$ direction, which makes the colour blue much more potent.
+
+## Section 4.6: Fixing normal visualisations
+
+However, the normal vector can have valid values from $-1$ to $1$ for each component. We cannot see values which are less than $0$ in this case, resulting in less red and less green. 
+
+We can shift the values like so: 
+
+$$-1\cdot0.5+0.5=0.0$$
+$$1\cdot0.5+0.5=0.0$$
+$$0\cdot0.5+0.5=0.0$$
+
+```cpp
+sphereColor = normal * 0.5f + 0.5f;
+```
+
+The result is:
+
+![image](https://user-images.githubusercontent.com/108275763/234373539-071a830e-c28d-4d89-97f9-43ba2558b092.png)
+
+We now get the full spectrum of colours.
+
+## Section 4.7: Calculating light and shade on a sphere
+
+We need to set the light source to face the $-z$ direction and $-y$ direction. We also need to calculate the ingoing and outgoing vectors. This is the light direction:
+
+```cpp
+glm::vec3 lightDir = glm::normalize(glm::vec3(-1,-1,-1));
+```
+
+Recall that we are trying to capture the direction of the normal vs the direction of the light. The angle of between these two vectors will show how much light is shared between them.
+
+Note that the vectors are in opposite directions. We can negate the light direction to calculate the angle between the two vectors by using a vector dot product:
+
+$$a\cdot b = \cos(\theta)$$
+
+In code, it looks like this:
+
+```cpp
+float d = glm::dot(normal, -lightDir);
+```
+
+Because it is within the cosine function, it returns a value between $-1$ and $1$ and it indicates how much the normal is facing towards the light source. 
+
+For example, if the dot product returns $0$, then the cosine of the angle was 0. The cosine of 90 is also 0. This means that the angle between the normal and the light direction in this case is 90 degrees. 
+
+At this point we also know that any angles above 90 will return a negative value, hence, a brighter colour.
+
+Now, we can multiply the sphere colour by the dot product, and this is what we get:
+
+```cpp
+sphereColor *= d;
+```
+
+![image](https://user-images.githubusercontent.com/108275763/234424595-38608de4-a833-4bc3-a2a3-aadf2dfed868.png)
+
+We have successfully applied shading to the object.
