@@ -59,7 +59,7 @@ void Renderer::Render()
 
 glm::vec4 Renderer::PerPixel(glm::vec2 coord)
 {
-	glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
+	glm::vec3 rayOrigin(0.0f, 0.0f, 1.0f);
 	glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
 	float radius = 0.5f;
 	// rayDirection = glm::normalize(rayDirection);
@@ -80,15 +80,31 @@ glm::vec4 Renderer::PerPixel(glm::vec2 coord)
 	// b^2 - 4ac
 
 	float discriminant = b * b - 4.0f * a * c;
+	if (discriminant < 0.0f)
+	{
+		return glm::vec4(0, 0, 0, 1); // return black
+	}
 
+	// (-b +- sqrt(discriminant)) / 2a
+	// 
 	// > 0, 2 solutions
 	// = 0, 1 solution
 	// < 0, 0 solutions
 
-	if (discriminant >= 0.0f)
-	{
-		return glm::vec4(0, 1, 0, 1); // this makes green (R, G, B, A)
-	}
+	// plus variant
+	float t0 = (-b + glm::sqrt(discriminant)) / (2.0f * a);
+	// minus variant
+	float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
 
-	return glm::vec4(0, 0, 0, 1); // this returns black
+	glm::vec3 hitPoint = rayOrigin + rayDirection * closestT;
+	glm::vec3 normal = glm::normalize(hitPoint);
+
+	glm::vec3 lightDir = glm::normalize(glm::vec3(-1,-1,-1));
+	
+	// dot(normal, -lightDir) == cos(angle)
+	float d = glm::max(glm::dot(normal, -lightDir), 0.0f);
+
+	glm::vec3 sphereColor(0, 1, 0);
+	sphereColor *= d;
+	return glm::vec4(sphereColor, 1.0f);	
 }
