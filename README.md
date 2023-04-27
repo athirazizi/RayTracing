@@ -1823,7 +1823,9 @@ However, the normal vector can have valid values from $-1$ to $1$ for each compo
 We can shift the values like so: 
 
 $$-1\cdot0.5+0.5=0.0$$
+
 $$1\cdot0.5+0.5=0.0$$
+
 $$0\cdot0.5+0.5=0.0$$
 
 ```cpp
