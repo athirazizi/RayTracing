@@ -2207,14 +2207,27 @@ These parameters can be visualised in the image below:
 ![image](https://user-images.githubusercontent.com/108275763/234670873-b9c32829-6350-48df-99c9-839e90317328.png)
 
 Figure: A viewing frustum.
+
 Source: Adapted from wikipedia
 
 A viewing frustum represents the field of view of the camera in a 3D region. The near plane indicated in yellow is the `nearClip` and the far plane indicated in blue is the `farClip`. Anything outside of this frustum is not rendered in the final scene.
 
-The function `OnUpdate` is called every frame with the timestep:
+There are also various utility functions which we can use :
+```cpp
+const glm::mat4& GetProjection() const { return m_Projection; }
+const glm::mat4& GetInverseProjection() const { return m_InverseProjection; }
+const glm::mat4& GetView() const { return m_View; }
+const glm::mat4& GetInverseView() const { return m_InverseView; }
+const glm::vec3& GetPosition() const { return m_Position; }
+const glm::vec3& GetDirection() const { return m_ForwardDirection; }
+const std::vector<glm::vec3>& GetRayDirections() const { return m_RayDirections; }
+float GetRotationSpeed();
+```
+
+The function `OnUpdate` is called every frame with the timestep (which allows us to move at constant speed, independent of the frame rate):
 
 <details>
-<summary>Click here to view `OnUpdate`</summary>
+<summary>Click here to view OnUpdate</summary>
 
 ```cpp
 bool Camera::OnUpdate(float ts) {
@@ -2281,22 +2294,62 @@ bool Camera::OnUpdate(float ts) {
 ```
 </details>
 
-This allows us to move at constant speed, independent of the frame rate.
+`OnUpdate` captures the delta of the mouse position from the previous frame to the current frame. This value should constantly be updated to make the system feel more responsive. 
 
-The function `OnResize` is used to recalculate the projection matrix:
+If right click is not held down, the cursor mode is set to normal and it returns nothing. Else, we lock the cursor to the window and hide the cursor.
+
+The `moved` flag is used to check if we need to recalculate the ray directions and matrices. 
+
+The `upDirection` vector captures the y-directional vector.
+
+The `rightDirection` vector captures the x-directional vector. This is the cross product of the `upDirection` and `m_ForwardDirection`.
+
+Note that with this current setup the camera cannot be tilted along the z-axis.
+
+The WASD are used as input keys:
+
+If the user presses `W`, the camera moves forward. The distance it moves forward is multiplied by a fixed `speed` and `ts` (timestep, so the movement is scaled appropriately based on how fast the program is running). Similarly, the `S` key moves backwards, `D` moves to the right, `A` moves to the left. `E` moves the position of the camera upwards, and `Q` downwards. Additionally, the `moved` flag is set to true so the ray directions are recalculated. 
+
+Likewise, we will have to recalculate ray directions if the camera rotates. If the mouse moves up and down, the pitch will change depending on the `delta.y` component. If the mouse moves left and right, the yaw will change depending on the `delta.x` component. For clarification, see the GIF below:
+
+[INSERT GIF HERE]
+
+The `pitchDelta` and `yawDelta` are used in a `glm::quat` quaternion, which captures the delta in all axes. This is used to produce a new forward direction by taking into account the quaternion. If the delta has changed in the x or y axis, then the view and the ray direction will have to be recalculated:
+
+[INSERT VIEW MATRIX HERE] https://forum.unity.com/threads/view-matrix-explanation.1198456/
+
 ```cpp
-void OnResize(uint32_t width, uint32_t height);
+void Camera::RecalculateView() {
+	m_View = glm::lookAt(m_Position, m_Position + m_ForwardDirection, glm::vec3(0, 1, 0));
+	m_InverseView = glm::inverse(m_View);
+}
 ```
 
-There are also various utility functions which we can use :
+This function assigns a position, a vector to look at, and an a y-directional vector to the `m_View` attribute. We also calculate the inverse view by inverting the view matrix.
+
+The function `OnResize()` is used to recalculate the projection matrix:
 ```cpp
-const glm::mat4& GetProjection() const { return m_Projection; }
-const glm::mat4& GetInverseProjection() const { return m_InverseProjection; }
-const glm::mat4& GetView() const { return m_View; }
-const glm::mat4& GetInverseView() const { return m_InverseView; }
-const glm::vec3& GetPosition() const { return m_Position; }
-const glm::vec3& GetDirection() const { return m_ForwardDirection; }
-const std::vector<glm::vec3>& GetRayDirections() const { return m_RayDirections; }
-float GetRotationSpeed();
+void Camera::OnResize(uint32_t width, uint32_t height) {
+	if (width == m_ViewportWidth && height == m_ViewportHeight)
+		return;
+
+	m_ViewportWidth = width;
+	m_ViewportHeight = height;
+
+	RecalculateProjection();
+	RecalculateRayDirections();
+}
 ```
 
+`RecalculateProjection()` creates a perspective matrix based on the FOV, the viewport width & height to calculate the aspect ratio, as well as the near and far clip plane:
+
+[INSERT REFERENCE PICTURE HERE] www.songho.ca/opengl/gl_projectionmatrix.html
+
+```cpp
+void Camera::RecalculateProjection() {
+	m_Projection = glm::perspectiveFov(glm::radians(m_VerticalFOV), (float)m_ViewportWidth, (float)m_ViewportHeight, m_NearClip, m_FarClip);
+	m_InverseProjection = glm::inverse(m_Projection);
+}
+```
+
+## Section 5.3: Calculating and caching per-pixel ray directions

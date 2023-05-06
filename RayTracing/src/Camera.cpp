@@ -15,20 +15,31 @@ Camera::Camera(float verticalFOV, float nearClip, float farClip)
 }
 
 bool Camera::OnUpdate(float ts) {
+	// Capture mouse input
 	glm::vec2 mousePos = Input::GetMousePosition();
+
+	// Calculate position moved with the mouse
 	glm::vec2 delta = (mousePos - m_LastMousePosition) * 0.002f;
 	m_LastMousePosition = mousePos;
 
+	// If right click is now held down, return
+	// Camera movement is only active when right click is held
 	if (!Input::IsMouseButtonDown(MouseButton::Right)) {
 		Input::SetCursorMode(CursorMode::Normal);
 		return false;
 	}
 
+	// Locks cursor to window and hides the cursor
 	Input::SetCursorMode(CursorMode::Locked);
 
+	// Used to check if ray directions and matrices need to be recalculated 
 	bool moved = false;
 
+	// Calculate the y direction of the camera
 	constexpr glm::vec3 upDirection(0.0f, 1.0f, 0.0f);
+
+	// Calculate the right direction, which is the cross product
+	// between the forward direction and the up direction
 	glm::vec3 rightDirection = glm::cross(m_ForwardDirection, upDirection);
 
 	float speed = 5.0f;
@@ -58,9 +69,12 @@ bool Camera::OnUpdate(float ts) {
 
 	// Rotation
 	if (delta.x != 0.0f || delta.y != 0.0f) {
+		
 		float pitchDelta = delta.y * GetRotationSpeed();
+		
 		float yawDelta = delta.x * GetRotationSpeed();
 
+		// Captures the delta in all axes
 		glm::quat q = glm::normalize(glm::cross(glm::angleAxis(-pitchDelta, rightDirection),
 			glm::angleAxis(-yawDelta, glm::vec3(0.f, 1.0f, 0.0f))));
 		m_ForwardDirection = glm::rotate(q, m_ForwardDirection);
@@ -97,6 +111,7 @@ void Camera::RecalculateProjection() {
 }
 
 void Camera::RecalculateView() {
+	// Calculate the view matrix
 	m_View = glm::lookAt(m_Position, m_Position + m_ForwardDirection, glm::vec3(0, 1, 0));
 	m_InverseView = glm::inverse(m_View);
 }
