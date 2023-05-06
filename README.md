@@ -22,7 +22,7 @@ Other resources:
 - Visual Studio 2022 <br> https://visualstudio.microsoft.com/
 - Vulkan SDK <br> https://vulkan.lunarg.com/
 - Desmos <br> https://www.desmos.com/calculator
-- imgui <br> https://github.com/ocornut/imguib
+- imgui <br> https://github.com/ocornut/imgui
 
 # Section 1: Welcome to Ray Tracing!
 
@@ -2300,4 +2300,3 @@ const std::vector<glm::vec3>& GetRayDirections() const { return m_RayDirections;
 float GetRotationSpeed();
 ```
 
-test change
