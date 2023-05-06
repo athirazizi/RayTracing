@@ -2353,3 +2353,50 @@ void Camera::RecalculateProjection() {
 ```
 
 ## Section 5.3: Calculating and caching per-pixel ray directions
+
+The camera has an attribute `m_RayDirections`: 
+
+```cpp 
+std::vector<glm::vec3> m_RayDirections;
+```
+
+It is associated with the `RecalculateRayDirections()` function which performs some cached calculations based on the view and projection matrices:
+
+```cpp
+void Camera::RecalculateRayDirections() {
+	m_RayDirections.resize(m_ViewportWidth * m_ViewportHeight);
+
+	for (uint32_t y = 0; y < m_ViewportHeight; y++) {
+		for (uint32_t x = 0; x < m_ViewportWidth; x++) {
+			glm::vec2 coord = { (float)x / (float)m_ViewportWidth, (float)y / (float)m_ViewportHeight };
+			coord = coord * 2.0f - 1.0f; // -1 -> 1
+
+			glm::vec4 target = m_InverseProjection * glm::vec4(coord.x, coord.y, 1, 1);
+			glm::vec3 rayDirection = glm::vec3(m_InverseView * glm::vec4(glm::normalize(glm::vec3(target) / target.w), 0)); // World space
+			m_RayDirections[x + y * m_ViewportWidth] = rayDirection;
+		}
+	}
+}
+```
+
+Note that this code is similar to what we currently have in `Renderer::Render()`. 
+
+OpenGL and DirectX which uses column-major maths has matrices for projection, view, model, and a vertex position. [CITATION NEEDED]
+
+In a vertex shader, the vertex position is multiplied by the transform to specify its position in world space. Then, this is further multiplied by the view matrix and the projection matrix. For HLSL or in row-major, we would perform the inverse of these operations.
+
+$vertex \cdot transform \cdot view \cdot projection$
+
+The GLSL code will look something like this:
+
+$projection \cdot view \cdot transform \cdot vertex$
+
+This produces normalised device coordinates like clipping space (-1 to 1). We already know the NDC as these are our pixels. We are casting our ray in world space, but we are restricted in the -1 to 1 space. We can resolve this by multiplying the coordinate by the inverse of each matrix and perform a perspective division to get a coordinate in world space.
+
+The `target` variable is an intermetiate vector which is the inverse projection multiplied by the coordinates.
+
+The `rayDirection` multiplies the inverse view matrix by the normalised target with a perspective division.
+
+We then cache the ray directions, as the normalisation operation and the matrix multiplication operations might slow the CPU down. SIMD performs these operations in fewer instructions, leading to faster execution [CITATION NEEDED]. Later on, this code will be refactored to be run on the GPU inside a shader (computer/raygen shader) where execution times will be fast.
+
+## Section 5.4: Using the camera class
