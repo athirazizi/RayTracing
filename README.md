@@ -2400,3 +2400,154 @@ The `rayDirection` multiplies the inverse view matrix by the normalised target w
 We then cache the ray directions, as the normalisation operation and the matrix multiplication operations might slow the CPU down. SIMD performs these operations in fewer instructions, leading to faster execution [CITATION NEEDED]. Later on, this code will be refactored to be run on the GPU inside a shader (computer/raygen shader) where execution times will be fast.
 
 ## Section 5.4: Using the camera class
+
+Recall that in `WalnutApp.cpp`, our functions are called the class `ExampleLayer`. 
+
+We can declare a camera as a member inside the Layer: 
+```cpp
+Camera m_Camera
+```
+
+and then define it in the constructor:
+
+```cpp
+ExampleLayer()
+	: m_Camera(45.0f, 0.1f, 100.0f){}
+```
+
+We will begin by overriding the function `OnUpdate()` in the `Layer` class. Here, we will update the camera:
+
+```cpp
+virtual void OnUpdate(float ts) override
+{
+	m_Camera.OnUpdate(ts);
+}
+```
+
+We also want to pass in this camera into the renderer member:
+```cpp
+m_Renderer.Render(m_Camera);
+```
+
+and so we have to update the `Render()` function to take a camera as an input:
+
+```cpp
+void Render(const Camera& camera);
+```
+
+As we loop through every pixel in the `Render()` function, we need to obtain the appropriate cached ray direction. For now, the ray origin is a fixed value.
+
+```cpp
+const glm::vec3& rayOrigin = camera.GetPosition();
+```
+
+The ray direction is used for every pixel coordinate so it is called inside the two loops:
+
+```cpp
+for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
+{
+	for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
+	{
+		const glm::vec3& rayDirection = camera.GetRayDirections()[x + y * m_FinalImage->GetWidth()];
+```
+
+We have to refactor `PerPixel()` since we have removed the `coord` variable. Let use rename it to `TraceRay()` and take in a ray as a parameter. Recall that a ray has an origin and a direction. We will make a Ray header file which contains a data structure containing a ray:
+
+`Ray.h`
+
+```cpp
+#pragma once
+
+#include <glm/glm.hpp>
+
+struct Ray
+{
+	glm::vec3 Origin;
+	glm::vec3 Direction;
+};
+```
+
+We can now create an object for the ray in `Render()`:
+
+```cpp
+void Renderer::Render(const Camera& camera)
+{
+	Ray ray;
+	ray.Origin = camera.GetPosition();
+
+	for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
+	{
+		for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
+		{
+			ray.Direction = camera.GetRayDirections()[x + y * m_FinalImage->GetWidth()];
+			
+
+			// set the pixel colour to each pixel
+			glm::vec4 color = TraceRay(ray);
+```
+
+Now, refactor `TraceRay()`:
+
+<details>
+<summary>Click here to view code</summary>
+
+```cpp
+glm::vec4 Renderer::TraceRay(const Ray& ray)
+{
+	float radius = 0.5f;
+	// rayDirection = glm::normalize(rayDirection);
+
+	// (bx^2 + by^2)t^2 + (2(axbx + ayby))t + (ax^2 + ay^2 - r^2) = 0
+	// where
+	// a = ray origin
+	// b = ray direction
+	// r = radius
+	// t = hit distance
+
+	// float a = rayDirection.x * rayDirection.x + rayDirection.y * rayDirection.y + rayDirection.z * rayDirection.z;
+	float a = glm::dot(ray.Direction, ray.Direction);
+	float b = 2.0f * glm::dot(ray.Origin, ray.Direction);
+	float c = glm::dot(ray.Origin, ray.Origin) - radius * radius;
+
+	// quadratic formula discriminant
+	// b^2 - 4ac
+
+	float discriminant = b * b - 4.0f * a * c;
+	if (discriminant < 0.0f)
+	{
+		return glm::vec4(0, 0, 0, 1); // return black
+	}
+
+	// (-b +- sqrt(discriminant)) / 2a
+	// 
+	// > 0, 2 solutions
+	// = 0, 1 solution
+	// < 0, 0 solutions
+
+	// plus variant
+	float t0 = (-b + glm::sqrt(discriminant)) / (2.0f * a);
+	// minus variant
+	float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
+
+	glm::vec3 hitPoint = ray.Origin + ray.Direction * closestT;
+	glm::vec3 normal = glm::normalize(hitPoint);
+
+	glm::vec3 lightDir = glm::normalize(glm::vec3(-1,-1,-1));
+	
+	// dot(normal, -lightDir) == cos(angle)
+	float d = glm::max(glm::dot(normal, -lightDir), 0.0f);
+
+	glm::vec3 sphereColor(0, 1, 0);
+	sphereColor *= d;
+	return glm::vec4(sphereColor, 1.0f);	
+}
+```
+</details>
+
+Hit F5 and we can test the new inputs:
+
+[INSERT GIF OF W MOVING FORWARD, A MOVING BACKWARD]
+
+[INSERT GIF OF S MOVING LEFT, D MOVING RIGHT]
+
+[INSERT CODE AT THIS POINT]
