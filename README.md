@@ -12,6 +12,7 @@ Luckily for us, there is an abundance of resources for ray tracing since its fir
 For the purposes of this project, we will be using the following:
 - Ray Tracing in One Weekend Series <br> https://raytracing.github.io/
 - Physically Based Rendering, From Theory to Implementation <br> https://www.pbr-book.org/
+- The Cherno, Ray Tracing <br> https://www.youtube.com/playlist?list=PLlrATfBNZ98edc5GshdBtREv5asFW3yXl
 
 We are applying ray tracing techniques from the former book series in real time scenarios, as opposed to a program which simply writes pixels to a file.
 The source content will be similar, but we will also implement and use triangles which can later be used to render 3D meshes.
