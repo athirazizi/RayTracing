@@ -4,7 +4,7 @@ This GitHub repo serves as a front to present the researcher's BSc project on 'S
 
 In this `README.md` file, we will explain the concepts related to ray tracing, the implementation of said concepts, and the steps to replicate the project.
 
-# Section 0: Resources
+# 00 Resources
 
 The project emphasises the use of modern practical based literature concerning ray tracing:
 
@@ -23,9 +23,9 @@ Other resources:
 - [Shadertoy](https://www.shadertoy.com/)
 - [Scratchapixel](https://www.scratchapixel.com/)
 
-# Section 1: Setting up the project
+# 01 Setting up the project
 
-## Step 1: Using the Walnup App Template
+## 1.1 Using the Walnup App Template
 
 [Walnut](https://github.com/TheCherno/WalnutAppTemplate) is an application development framework which will act as the base of the project.
 
@@ -36,7 +36,7 @@ Other resources:
 
 By clicking `Use this template` on the GitHub page, we can create a [private repository](https://github.com/athirazizi/RayTracing/). 
 
-## Step 2: Cloning the Repo
+## 1.2 Cloning the Repo
 
 Next, we will clone the newly created repo using the following `git` command:
 
@@ -44,7 +44,7 @@ Next, we will clone the newly created repo using the following `git` command:
 git clone --recursive https://github.com/athirazizi/RayTracing/
 ```
 
-## Step 3: Setting up the Project
+## 1.3 Setting up the Project
 
 Once the repo has been cloned, run the `Setup.bat` script:
 
@@ -64,7 +64,7 @@ As with any new project, hit F5 and run the solution. This is what we are greete
 
 The UI elements are rendered using Vulkan. The menus can be resized and docked to the window.
 
-## Step 4: Rendering an Image 
+## 1.4 Rendering an Image 
 
 We can declare an image of the data type `Image` from the `Walnut namespace`:
 
@@ -213,7 +213,7 @@ ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 ImGui::PopStyleVar();
 ```
 
-## Step 5: Returning Random Colours for each Pixel
+## 1.5 Returning Random Colours for each Pixel
 
 We can experiment further when returning a colour to render a pixel. For example, we can set the colour to be random:
 
@@ -238,7 +238,7 @@ Hit F5 and click render again and this is what the program returns:
 
 Since the button calls the `Render()` function, it will output different pixel colours every time it is clicked.
 
-## Step 6: Timing the Render Function
+## 1.6 Timing the Render Function
 
 We can add a `Timer` from the Walnut library to see how long it takes to render the image:
 
@@ -298,7 +298,7 @@ Run the project again and this is what the program returns:
 <figcaption>Figure 8. Shorter render time using the release build.</figcaption>
 </figure><br/><br/>
 
-## Step 7: Realtime Rendering
+## 1.7 Realtime Rendering
 
 We can render a random image every frame by adding `Render()` into the end of `OnUIRender()`.
 
@@ -309,31 +309,37 @@ We can render a random image every frame by adding `Render()` into the end of `O
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/blob/35085b6828845eb0e34acbf00eea32b7d3e68ae5/RayTracing/src/WalnutApp.cpp).
 
-# Section 2: Rays, Sphere, and Mathematics
+# 02 Mathematics for Ray-Sphere Intersection
 
-The first goal in this section is to render a sphere. 
+The main goal in section 2 and 3 is to render a sphere.
 
-We want to specify a camera and a sphere in 3D space. Then, we want to generate an image which describes this scene. 
+We want to specify a camera (to shoot our rays from) and a sphere in 3D space. Then, we want to generate an image which describes this scene.
 
-- Why spheres?
+Spheres are simple to define mathematically because they consist of:
+- a 3D coordinate which defines its origin in 3D space,
+- and a radius which defines how large the sphere is. 
 
-Because they are simple to define mathematically:
-- Spheres consist of a 3D coordinate which defines its origin in a 3D space,
-- and a radius which defines how big the sphere is. 
+In this section we will cover some of the mathematics related to ray tracing. The mathematics will be done in 2D (for the sake of simplicity) using a circle, since the only difference is that a sphere will have a $z$ component, whereas a circle does not. In the actual code, we will have to acknowledge the 3rd dimension.
 
-In this section I will cover some of the mathematics related to ray tracing. The mathematics will be done in 2D (for the sake of simplicity), since the only difference is that a sphere will have a $z$ component, where a circle does not. In the actual code, of course we will have to acknowledge the 3rd dimension.
+## 2.1 Lines and rays
 
-## Section 2.1: Lines and rays
+Relevant sources:
 
-To get started, we must understand what a line is, since it is conceptually similar to a ray.
+- [PBRT - 1.2.2 Ray-Object Intersections](https://www.pbr-book.org/3ed-2018/Introduction/Photorealistic_Rendering_and_the_Ray-Tracing_Algorithm#RayndashObjectIntersections)
+- [RT in One Weekend - 5.1 Ray-Sphere Intersection](https://raytracing.github.io/books/RayTracingInOneWeekend.html#addingasphere/ray-sphereintersection)
 
-On a cartesian plane, with an $x$ axis and a $y$ axis, the most basic line we can draw is $y=x$:
+We must first understand what a line is, since it is conceptually similar to a ray.
 
-<img src="https://user-images.githubusercontent.com/108275763/223700356-6b3489e8-ac70-4538-b245-ee83ae72841a.png" height=512> 
+On a cartesian plane with an $x$ and $y$ axis, the most basic line we can draw is $y=x$:
+
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/223700356-6b3489e8-ac70-4538-b245-ee83ae72841a.png">
+<figcaption>Figure 10. A straight line on a cartesian plane.</figcaption>
+</figure><br/><br/>
 
 All lines follow the equation $y=mx+c$, where $m$ is the gradient and $c$ is the $y$ intercept.
 
-Instead of straight lines though, for ray tracing we will use vectors:
+Instead of straight lines, we will use vectors for ray tracing:
 
 - We want to define a point in 3D space (the origin of our line)
 - We want to specify a direction for the line to go towards.
@@ -342,52 +348,69 @@ In other words, this is a ray, expressed in terms of vectors.
 
 In 2D, the origin will have an $x$ and $y$ component and the direction will also have an $x$ and $y$ component:
 
-![image](https://user-images.githubusercontent.com/108275763/223703417-e6a1dde3-714a-40e5-9884-b5c352a5041b.png)
+<figure>
+<img src="https://i.imgur.com/6lDkEjU.png">
+<figcaption>Figure 11. A vec2 component.</figcaption>
+</figure><br/><br/>
 
-In addition, we want to define a point on the line somewhere. In this case, we are using a $t$ parameter, which is the distance of the point along the line. It is also called a scalar since it scales along the vector.
+In addition, we want to define a point along the line. In this case, we are using a $t$ parameter, which is the distance of the point along the line. It is also called a scalar since it scales along the vector.
 
 We can think of this ray as a function:
 
 $$P_{x,y} (t) = a_{x,y} + b_{x,y} \cdot t$$
 
-Suppose that the origin had coordinates $(2,2)$ and the direction of $(1,1)$:
-<br> If we wanted to find a point a long the line of 2 units down that line, we would substitute $t=2$.
+Suppose that the origin had coordinates $(2,2)$ and a direction of $(1,1)$. If we wanted to find a point which is 2 units down that line, we would substitute $t=2$.
 
-Using the equation:
+Substituting $t=2$ using the equation:
 
 $$P_{x,y} (2) = (2,2) + (1,1) \cdot (2)$$
 
-This would return:
-
 $$P_{x,y} (2) = (4,4)$$
 
-![image](https://user-images.githubusercontent.com/108275763/223706941-771ff071-c817-4244-8f8b-53ae7c338a66.png)
+The result is visualised below:
+
+<figure>
+<img src="https://i.imgur.com/kFrQsjE.png">
+<figcaption>Figure 12. Substituting t = 2.</figcaption>
+</figure><br/><br/>
 
 If we enter a negative variable to $t$, we will go backwards from the origin:
 
-![image](https://user-images.githubusercontent.com/108275763/223708157-bb4fff9c-7c6d-493a-831c-ac223e30217e.png)
+<figure>
+<img src="https://i.imgur.com/y9cIPgb.png">
+<figcaption>Figure 13. Negative and positive t parameters.</figcaption>
+</figure><br/><br/>
 
-If the values are not identical in $x$ and $y$, we can split up the function by dimension or by component:
+If the $x$ and $y$ values are not identical, we can split up the function by dimension/component:
 
 $$P_{x} = a_{x} + b_{x} \cdot t$$
 
 $$P_{y} = a_{y} + b_{y} \cdot t$$
 
-These are called parametric equations. If there was a $z$ component, we would simply add another parametric equation.
+These are called parametric equations. If there was a $z$ component, we would simply add another parametric equation:
 
-## Section 2.2: Spheres and circles
+$$P_{z} = a_{z} + b_{z} \cdot t$$
+
+## 2.2 Spheres and circles
 
 Spheres are similar to circles, except that they have a $z$ dimension. 
+
+The equation of a sphere is similar to a circle, but with a $z$ component:
+
+$$(x-a)^2 + (y-b)^2 + (z-c)^2 = r^2$$
 
 The equation of a circle is:
 
 $$(x-a)^2 + (y-b)^2 = r^2$$
 
-Where $(a,b)$ are the coordinates of the origin and $r$ is the radius.
+Where $(a,	b)$ are the coordinates of the origin and $r$ is the radius.
 
 For example:
 
-![image](https://user-images.githubusercontent.com/108275763/223714444-9c569d19-5bd6-4b5f-9625-32b5a160693a.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/223714444-9c569d19-5bd6-4b5f-9625-32b5a160693a.png">
+<figcaption>Figure 14. A circle on a cartesian plane.</figcaption>
+</figure><br/><br/>
 
 This circle has the origin $(0,0)$ and a radius of $2$.
 
@@ -401,14 +424,16 @@ Let us rearrange the equation to resemble $y=mx+c$:
 
 $$y=\sqrt{4-x^2}$$
 
-Entering this into desmos and we get:
+If we enter this equation into Desmos we would get:
 
-![image](https://user-images.githubusercontent.com/108275763/223716951-3b43e862-30d9-48f8-81de-1e848f5d4d9c.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/223716951-3b43e862-30d9-48f8-81de-1e848f5d4d9c.png">
+<figcaption>Figure 15. Entering the positive square root into Desmos.</figcaption>
+</figure><br/><br/>
 
+We notice that only the first half of the circle is graphed.
 
-- Why is the other half missing?
-
-When you square something, there are two solutions to a square root:
+When a value is squared, there are two solutions to a square root:
 
 $$\sqrt{4}=2$$
 
@@ -420,71 +445,82 @@ $$2^2 = 4$$
 
 $$(-2)^2 = 4$$
 
-We do not know whether the answer to $\sqrt{4}$ is $2$ or $-2$. It could be either one. 
+We do not know whether the answer to $\sqrt{4}$ is $2$ or $-2$. Both solutions are acceptable. 
 
-Because of this, to see the entire graph, we need to input plus or minus on the result of the square root:
+Because of this, we need to input plus or minus to the result of the square root to see the entire graph:
 
 $$y=\pm\sqrt{4-x^2}$$
 
-![image](https://user-images.githubusercontent.com/108275763/223717043-35ec022c-daf3-4a13-af47-4ce940cd6f1f.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/223717043-35ec022c-daf3-4a13-af47-4ce940cd6f1f.png">
+<figcaption>Figure 16. Entering both positive and negative square roots.</figcaption>
+</figure><br/><br/>
 
-Now, we can see both halves because we take into account both solutions.
+Now, we can see both halves because we took into account both solutions.
 
-Suppose that a ray has an origin $(-3,-3)$ that goes in direction $(1,1)$, how would know if it collides with the circle above?
+Suppose that a ray has an origin $(-3,-3)$ that goes in the direction $(1,1)$. How would we know if it collides with the circle above?
 
 On Desmos, we can visually see the solutions:
 
-![image](https://user-images.githubusercontent.com/108275763/223718246-f25fae88-402c-4188-b675-22329abcd6ac.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/223718246-f25fae88-402c-4188-b675-22329abcd6ac.png">
+<figcaption>Figure 17. Points of ray-object intersection.</figcaption>
+</figure><br/><br/>
 
-We need to formulate an equation to find these collisions in program code. 
+We need to formulate an equation to find these points of intersect in program code. 
 
-The equation of sphere is similar to a circle, but with a $z$ component:
-
-$$(x-a)^2 + (y-b)^2 + (z-c)^2 = r^2$$
-
-## Section 2.3: How does this relate to ray tracing?
+## 2.3 Ray-Sphere Intersection in Ray Tracing
 
 We want to render an image similar to this:
 
-![image](https://user-images.githubusercontent.com/108275763/223720753-736b8c3b-b8be-43a8-9113-a32753af0263.png)
+<figure>
+<img src="https://i.imgur.com/JP84mO9.png">
+<figcaption>Figure 18. A sphere in 3D space.</figcaption>
+</figure><br/><br/>
 
-And later, we want to add some lighting to show that the object in the image is a 3D sphere:
+We want to add a directional light to show that the object in the image is a 3D sphere:
 
-![image](https://user-images.githubusercontent.com/108275763/223721019-a44fd361-ceb9-4d83-8eba-6454a63b25b6.png)
+<figure>
+<img src="https://i.imgur.com/D9Iaxmv.png">
+<figcaption>Figure 19. A sphere with a directional light in 3D space.</figcaption>
+</figure><br/><br/>
 
-If we look at the image from a 2D perspective:
+The image can be looked at from a 2D perspective:
 
-![image](https://user-images.githubusercontent.com/108275763/223722525-1b92b11c-37b2-42ca-8daa-33b42389c9f7.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/223722525-1b92b11c-37b2-42ca-8daa-33b42389c9f7.png">
+<figcaption>Figure 20. Sending rays from the camera onto a scene with a sphere.</figcaption>
+</figure><br/><br/>
 
-We can see that we are sending rays from the camera and seeing if the rays collide with the sphere.
+We can see that we are sending rays from the camera and determining if the rays collide with the sphere.
 
-Depending on the points of collisions, which have coordinates of their own, we will set the colour of the pixel that was 'hit' to a particular value. 
+Depending on the points of collisions, which have coordinates of their own, we can set the colour of the pixel that was 'hit' to a particular value. 
 
-## Section 2.4: How do we find the collision points?
+## 2.4 Mathematics for Points of Collision
 
 Suppose that we have a ray $a_{-3,-3} + b_{1,1} \cdot t$ and a circle $x^2 + y^2 + 2^2 = 0$, we can set up an equation to see where it collides.
 
-To start with, let us split up the ray by dimension:
+To start with, let us split up the ray by the $x$ and $y$ dimension:
 
 $$a_x + b_x \cdot t$$
 
 $$a_y + b_y \cdot t$$
 
-We are able to substitute these equations into $x$ and $y$ components of the circle:
+We can substitute these equations into $x$ and $y$ components of the circle:
 
 $$(a_x + b_x t)^2 + (a_y + b_y t)^2 - 4 = 0$$
 
-Let us expand the equation:
+Expanding the equation:
 
 $$(a_x + b_x t)(a_x + b_x t) + (a_y + b_y t)(a_y + b_y t) - 4 = 0$$
 
 $$= a_{x}^2 + 2 a_{x} b_{x} t + b_{x}^2 t^2 + a_{y}^2 + 2 a_{y} b_{y} t + b_{y}^2 t^2 - 4 = 0$$
 
-## Section 2.5: Quadratic equations
+## 2.5 Quadratic Equations
 
 We want to solve for $t$, and we can do this by using the quadratic equation $ax^2 + bx + c = 0$.
 
-We can rearrange the equation to express in terms of $t$:
+We can refactor the equation to be expressed in terms of $t$:
 
 $$(b_x^2 +b_y^2)t^2 + (2a_xb_x + 2a_yb_y)t + (a_x^2 + a_y^2 - 4) = 0$$
 
@@ -495,14 +531,15 @@ $a_x$ and $a_y$ is the origin of the ray.
 
 As such we can simply substitute the values:
 
-$a=(-3,-3)$ <br>
-$b=(1,1)$
+$$a=(-3,-3)$$
+
+$$b=(1,1)$$
 
 $$(1^2 + 1^2)t^2 + (2(-3)(1) + 2(-3)(1))t + ((-3)^2 + (-3)^2 -4) = 0$$
 
 $$2t^2 - 12t + 14$$
 
-## Section 2.6 Solving the equation
+## 2.6 Solving the equation
 
 We can solve the equation using the quadratic formula:
 
@@ -510,23 +547,29 @@ $$x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$$
 
 Our values are:
 
-$a=2$ <br>
-$b=-12$ <br>
-$c=14$
+$$a=2$$
 
-## Section 2.7 Using the discriminant
+$$b=-12$$
 
-We can use the discriminant $\sqrt{b^2 - 4ac}$ to tell us if there are any solutions and how many solutions there are. Substituting our values into the discriminant and we get:
+$$c=14$$
+
+## 2.7 Using the discriminant
+
+We can use the discriminant $\sqrt{b^2 - 4ac}$ to tell us if there are any solutions and exactly how many solutions there are. 
+
+Substituting our values into the discriminant and we get:
 
 $$\sqrt{(-12)^2 - 4(2)(14)}$$
 
 $$144 - 112 = 32$$
 
-If we get a value $>0$, then we have 2 solutions. <br> 
-If we get a value $=0$, we have 1 solution. <br>
-If we get a value $<0$, we have 0 solutions. <br>
+- If we get a value $>0$, then we have 2 solutions.
+- If we get a value $=0$, we have 1 solution.
+- If we get a value $<0$, we have 0 solutions.
 
-## Section 2.8 Finding exact intersection points
+## 2.8 Finding exact intersection points
+
+Continue to solve the discriminant:
 
 $$\frac{-b \pm \sqrt{32}}{2a}$$
 
@@ -536,25 +579,27 @@ $$= \frac{12 \pm 5.66}{4}$$
 
 $$t = 4.415, 1.585$$
 
-We know know how far along the ray the intersections took place:
+We now know how far along the ray the intersections took place.
 
-![image](https://user-images.githubusercontent.com/108275763/223733395-66e29afb-7b79-4eb1-af60-0071954c2e74.png)
+We can substitute these values into our parametric equations:
 
-We can plug in these values into our parametric equations:
+$$a_x +b_x t$$
 
-$a_x +b_x t$ <br> 
-$a_y +b_y t$ <br>
+$$a_y +b_y t$$
 
 Since the $x$ and $y$ have the same values, we only have to substitute once.
 
-$-3 + 1(1.585) = (-1.415,-1.415)$ <br>
-$-3 + 1(4.415) = (1.415,1.415)$
+$$-3 + 1(1.585) = (-1.415,-1.415)$$
+$$-3 + 1(4.415) = (1.415,1.415)$$
 
-The answer is correct compared to Desmos:
+The answer matches the coordinates in Desmos:
 
-![image](https://user-images.githubusercontent.com/108275763/223718246-f25fae88-402c-4188-b675-22329abcd6ac.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/223718246-f25fae88-402c-4188-b675-22329abcd6ac.png">
+<figcaption>Figure 21. Coordinates from Desmos.</figcaption>
+</figure><br/><br/>
 
-There is a rounding error because we approximated $\sqrt{32}$ as $5.66$.
+Note that there is a rounding error because we approximated $\sqrt{32}$ as $5.66$.
 
 # Section 3: Rendering a Sphere Using Ray Tracing
 
