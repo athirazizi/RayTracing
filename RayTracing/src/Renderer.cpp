@@ -81,7 +81,7 @@ glm::vec4 Renderer::TraceRay(const Ray& ray)
 	float discriminant = b * b - 4.0f * a * c;
 	if (discriminant < 0.0f)
 	{
-		return glm::vec4(0, 0, 0, 1); // return black
+		return glm::vec4(1, 1, 1, 1); // return black
 	}
 
 	// (-b +- sqrt(discriminant)) / 2a
@@ -105,5 +105,6 @@ glm::vec4 Renderer::TraceRay(const Ray& ray)
 
 	glm::vec3 sphereColor(0, 1, 0);
 	sphereColor *= d;
+	//sphereColor = normal * 0.5f + 0.5f;
 	return glm::vec4(sphereColor, 1.0f);	
 }
