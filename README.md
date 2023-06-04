@@ -32,7 +32,7 @@ Other resources:
 <figure>
 <img src="https://i.imgur.com/vvIsZ7j.png">
 <figcaption>Figure 1. The Walnut app template repo.</figcaption>
-</figure><br/>
+</figure><br/><br/>
 
 By clicking `Use this template` on the GitHub page, we can create a [private repository](https://github.com/athirazizi/RayTracing/). 
 
@@ -51,7 +51,7 @@ Once the repo has been cloned, run the `Setup.bat` script:
 <figure>
 <img src="https://i.imgur.com/93u0PCD.png">
 <figcaption>Figure 2. The Setup.bat script.</figcaption>
-</figure><br/>
+</figure><br/><br/>
 
 This will create a `.sln` file for the Walnup App. The code for this can be found [here](https://github.com/TheCherno/WalnutAppTemplate/blob/master/WalnutApp/src/WalnutApp.cpp).
 
@@ -60,7 +60,7 @@ As with any new project, hit F5 and run the solution. This is what we are greete
 <figure>
 <img src="https://user-images.githubusercontent.com/108275763/223400005-52ee0109-325f-4031-9c30-80f7d2b6e7b0.png">
 <figcaption>Figure 3. The default Walnut App inferface.</figcaption>
-</figure><br/>
+</figure><br/><br/>
 
 The UI elements are rendered using Vulkan. The menus can be resized and docked to the window.
 
@@ -204,7 +204,7 @@ Hit F5 and click render and this is what we get:
 <figure>
 <img src = "https://user-images.githubusercontent.com/108275763/223688212-4abdd8ae-7538-4866-94fe-4290d2d1a6af.png">
 <figcaption>Figure 4. The first image render.</figcaption>
-</figure><br/>
+</figure><br/><br/>
 
 To fill out the entire Viewport with the image, we can get rid of the window padding:
 
@@ -234,7 +234,7 @@ Hit F5 and click render again and this is what the program returns:
 <figure>
 <img src="https://user-images.githubusercontent.com/108275763/223690636-5c304494-6497-45f7-bb15-4fae23ec7f7c.png">
 <figcaption>Figure 5. Returning random colours for each pixel in an image.</figcaption>
-</figure><br/>
+</figure><br/><br/>
 
 Since the button calls the `Render()` function, it will output different pixel colours every time it is clicked.
 
@@ -282,21 +282,21 @@ ImGui::Text("Last render: %.3fms", m_LastRenderTime);
 <figure>
 <img src="https://user-images.githubusercontent.com/108275763/223691524-385e279e-baaa-4b3a-aef2-7efdf8c21e18.png">
 <figcaption>Figure 6. Displaying the render time.</figcaption>
-</figure><br/>
+</figure><br/><br/>
 
 57 miliseconds to render a 720p image is not great. This is due to the project being configured as a debug build which has additional runtime checks which can slow render time. We configure the project using the Release build instead:
 
 <figure>
 <img src="https://user-images.githubusercontent.com/108275763/223691851-475ea2fc-6e67-40a4-a960-7f8130b308da.png">
 <figcaption>Figure 7. Configuring the project to Release build.</figcaption>
-</figure><br/>
+</figure><br/><br/>
 
 Run the project again and this is what the program returns:
 
 <figure>
 <img src="https://user-images.githubusercontent.com/108275763/223691951-822beacc-de04-460b-811a-b584315cb6c5.png">
 <figcaption>Figure 8. Shorter render time using the release build.</figcaption>
-</figure><br/>
+</figure><br/><br/>
 
 ## Step 7: Realtime Rendering
 
@@ -305,7 +305,7 @@ We can render a random image every frame by adding `Render()` into the end of `O
 <figure>
 <img src="https://user-images.githubusercontent.com/108275763/223695777-e1fd89c9-bffa-4efe-a462-7c502fb904ee.gif">
 <figcaption>Figure 9. Returning random colours for each pixel on UI render.</figcaption>
-</figure><br/>
+</figure><br/><br/>
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/blob/35085b6828845eb0e34acbf00eea32b7d3e68ae5/RayTracing/src/WalnutApp.cpp).
 
