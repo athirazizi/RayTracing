@@ -601,11 +601,11 @@ The answer matches the coordinates in Desmos:
 
 Note that there is a rounding error because we approximated $\sqrt{32}$ as $5.66$.
 
-# Section 3: Rendering a Sphere Using Ray Tracing
+# 03 Rendering a Sphere Using Ray Tracing
 
 We will be taking the mathematical concepts in section 2 and implementing them in code in this section.
 
-## Section 3.1: Creating a Renderer class
+## 3.1 The Renderer Class
 
 To start, we will be making two new files:
 
@@ -623,7 +623,7 @@ private:
 };
 ```
 
-The purpose of this class is to input a scene description, for the 3D world that we are trying to render. The output is an image which holds the pixels that the renderer has produced which describes that scene.
+The purpose of this class is to input a scene description for the 3D world that we are trying to render. The output is an image which holds the pixels that the renderer has produced which describes that scene.
 
 For now we will have a default constructor:
 
@@ -631,7 +631,7 @@ For now we will have a default constructor:
 Renderer() = default;
 ```
 
-And a function Render, which will render every pixel in the scene:
+The `Render()` function will render every pixel in the scene:
 
 ```cpp
 void Render();
@@ -644,7 +644,7 @@ void Renderer::Render()
 }
 ```
 
-The target of this render function is to be an actual image, so we will have to add `#include "Walnut/Image.h"`.
+The target of the `Render()` function is an Image from the Walnut library.
 
 We will be moving the image we created in `WalnutApp.cpp` into `Renderer.h` like so:
 
@@ -662,17 +662,15 @@ private:
 };
 ```
 
-Recall the `Render()` function in `WalnutApp.cpp`.
+Recall the `Render()` function in `WalnutApp.cpp`. Before we render, we checked to see if the image dimensions are the same as the viewport dimensions. If they are not, then it will create a new image with the same dimensions as the viewport. 
 
-Before we render, we checked to see if the image dimensions are the same as the viewport dimensions. If they are not, then it will create a new image with the same dimensions as the viewport. 
-
-Let us split this into another function `OnResize()` which takes a width and height:
+We can split this into another function `OnResize()` which takes a width and height:
 
 ```cpp
 void OnResize(uint32_t width, uint32_t height);
 ```
 
-Walnut has a function `Resize()`:
+The Walnut library has a function `Resize()`:
 
 ```cpp
 void Image::Resize(uint32_t width, uint32_t height)
@@ -687,9 +685,9 @@ void Image::Resize(uint32_t width, uint32_t height)
 }
 ```
 
-This checks if the image needs resizing, and if so, then it releases and reallocates the memory of the image.
+This checks if the image needs resizing, and if so, it releases and reallocates the memory of the image.
 
-In the `Render()` function, we want to call `Resize()` and then we can render.
+In the `Render()` function, we want to call `Resize()` before we render the image.
 
 We also had a CPU side buffer for the image data which we need to put in the class:
 
@@ -699,178 +697,20 @@ uint32_t* m_ImageData = nullptr;
 
 We will make another function `GetFinalImage()` which returns the final image.
 
-At this point the code should look like this:
+The refactored code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/974bdbdebc4bd9cda54c752c89c0ea9738824520/RayTracing/src).
 
-`Renderer.h`
+## 3.2 Pixel Shaders
 
-```cpp
-#pragma once
+Pixel shaders are GPU programs that are executed for every pixel of an image that is rendered.
 
-#include "Walnut/Image.h" // for Render()
+When triangles are rasterised, every pixel that gets generated as a result of that rasterisation process will invoke an instance of this pixel shader. We will be writing a pixel shader in C++.
 
-#include <memory> // for shared pointers
+An example of a pixel shader can be seen in [Shadertoy](https://www.shadertoy.com/new):
 
-class Renderer
-{
-public:
-	Renderer() = default;
-
-	void OnResize(uint32_t width, uint32_t height);
-	void Render(); // renders every pixel 
-
-	std::shared_ptr<Walnut::Image>GetFinalImage() const { return m_FinalImage; }
-private:
-	std::shared_ptr<Walnut::Image>m_FinalImage;
-	uint32_t* m_ImageData = nullptr;
-};
-```
-
-`Renderer.cpp`
-
-```cpp
-#include "Renderer.h"
-
-#include "Walnut/Random.h"
-
-void Renderer::OnResize(uint32_t width, uint32_t height)
-{
-	if (m_FinalImage)
-	{
-		// No resize necessary
-		if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height)
-			return;
-
-		m_FinalImage->Resize(width, height);
-	}
-	else
-	{
-		m_FinalImage = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
-	}
-
-	delete[] m_ImageData;
-	m_ImageData = new uint32_t[width * height];
-}
-
-void Renderer::Render()
-{
-	for (uint32_t i = 0; i < m_FinalImage->GetWidth() * m_FinalImage->GetHeight(); i++)
-	{
-		m_ImageData[i] = Walnut::Random::UInt();
-		m_ImageData[i] |= 0xff000000;
-	}
-
-	m_FinalImage->SetData(m_ImageData);
-}
-```
-
-`WalnutApp.cpp`
-
-```cpp
-#include "Walnut/Application.h"
-#include "Walnut/EntryPoint.h"
-
-#include "Walnut/Image.h"
-#include "Walnut/Timer.h"
-
-#include "Renderer.h"
-
-using namespace Walnut;
-
-class ExampleLayer : public Walnut::Layer
-{
-public:
-	virtual void OnUIRender() override
-	{
-		ImGui::Begin("Settings");
-
-		ImGui::Text("Last render: %.3fms", m_LastRenderTime);
-
-		if (ImGui::Button("Render"))
-		{
-			// this renders every frame.
-			Render();
-		}
-
-		ImGui::End();
-
-		// gets rid of border around the viewport
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-
-		// this is the camera
-		ImGui::Begin("Viewport");
-		
-		// these are float values
-		m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
-		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
-		
-		auto image = m_Renderer.GetFinalImage();
-
-		if (image)
-		{
-			// if there is an image, then display the image
-			ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() });
-		
-		}
-
-		ImGui::End();
-		ImGui::PopStyleVar();
-
-		Render();
-	}
-
-	void Render() 
-	{
-		Timer timer;
-
-		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
-		m_Renderer.Render();
-
-		m_LastRenderTime = timer.ElapsedMillis();
-	}
-
-private:
-	Renderer m_Renderer;
-	// buffer for image data
-	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
-	float m_LastRenderTime = 0.0f;
-};
-
-Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
-{
-	Walnut::ApplicationSpecification spec;
-	spec.Name = "RayTracing";
-
-	Walnut::Application* app = new Walnut::Application(spec);
-	app->PushLayer<ExampleLayer>();
-	app->SetMenubarCallback([app]()
-	{
-		if (ImGui::BeginMenu("File"))
-		{
-			if (ImGui::MenuItem("Exit"))
-			{
-				app->Close();
-			}
-			ImGui::EndMenu();
-		}
-	});
-	return app;	
-}
-```
-![RayTracing_53vDX6V4SI](https://user-images.githubusercontent.com/108275763/224484548-68710aa0-b839-4913-8181-b63542869e4c.gif)
-
-We have now successfully refactored the program.
-
-## Section 3.2: Structuring our code to work like a pixel fragment/shader
-
-- What are pixel shaders?
-
-These are GPU programs that will run for every pixel of an image that we are rendering. 
-
-For example when triangles get rasterised, every pixel that gets generated as a result of that rasterisation process will invoke an instance of this pixel shader. We will be writing a pixel shader in C++.
-
-A great example of this is [Shadertoy](https://www.shadertoy.com/new):
-
-![firefox_558jn7S5rH](https://user-images.githubusercontent.com/108275763/224481367-ef20e588-9f3f-41c0-9a40-3addcf1dafbb.gif)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/224481367-ef20e588-9f3f-41c0-9a40-3addcf1dafbb.gif">
+<figcaption>Figure 22. Shadertoy.</figcaption>
+</figure><br/><br/>
 
 Here, you can write a pixel shader and it will be rendered in real time. 
 
@@ -900,17 +740,20 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 }
 ```
 
-![image](https://user-images.githubusercontent.com/108275763/224481534-179de138-258e-4dbd-af2b-a3329125cac6.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/224481534-179de138-258e-4dbd-af2b-a3329125cac6.png">
+<figcaption>Figure 23. Simplified pixel shader in Shadertoy.</figcaption>
+</figure><br/><br/>
 
-The value between $0$ and $1$ across the $x$ axis is being displayed as the red channel, and from $0$ to $1$ across the $y$ axis is being displayed as the green channel.
+The $x$ axis is confined to a value between $0$ and $1$ and it is displayed as the red channel, and the $y$ axis acts similarly but it instead displays the green channel.
 
-Let us try to implement this in our code. We will make a function `PerPixel()`. It returns a uint_32t value and has a vec2 parameter which takes in coordinates.
+We will implment a pixel shader through a function `PerPixel()`. It returns a `uint_32t` value and has a `vec2` parameter which takes in coordinates.
 
 ```cpp
 uint32_t PerPixel(glm::vec2 coord);
 ```
 
-Coming back to the code in Shadertoy:
+Let us examine the pixel shader in Shadertoy:
 
 ```cpp
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -920,9 +763,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 }
 ```
 
-`fragCoord` is a pixel coordinate in pixel space. So in a resolution of 1280x720, a coordinate could be 600x500. The division `fragCoord/iResolution.xy` maps the value to a range from $0$ to $1$. 
+`fragCoord` is a pixel coordinate in pixel space. So in a resolution of 1280x720, a coordinate could be `(600,500)`. The division `fragCoord/iResolution.xy` maps the value to a range from $0$ to $1$. 
 
-Let us modify the `Render()` to contain two for loops, for $x$ and $y$ coordinates:
+We can modify the `Render()` to contain two for loops, for $x$ and $y$ coordinates:
 
 ```cpp
 for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
@@ -938,19 +781,20 @@ for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
 ```
 
 The reason we iterate the $y$ axis in the outer loop is because we want to be more friendly with the CPU cache (in terms of the layout of the buffer in memory):
-- as we go 1 uint32_t forwards we are going horizontally across the image
-- if we iterated the $x$ axis in the outer loop we would be skipping a portion of memory by going a full row forwards and this will slow down our program because the CPU cannot fetch the memory as easily.
+- as we go $1$ `uint32_t` forwards we are going horizontally across the image.
+- If we iterated the $x$ axis in the outer loop we would be skipping a portion of memory by going a full row forwards. This will slow down our program because the CPU cannot fetch the memory as easily.
 
-We can easily calculate what the coordinate should be in the nested for loop:
+We can determine the coordinate in the nested for loop:
 
 ```cpp
 glm::vec2 coord = { (float)x / (float)m_FinalImage->GetWidth(), (float)y / (float)m_FinalImage->GetHeight() };
 ```
 
-The coordinate is `x` divided by the total width of the image, and `y` divided by the total height. <br> 
-We have to cast the variables as float to perform float division, if not, it will perform integer division.
+The coordinate is `x` divided by the total width of the image, and `y` divided by the total height.
 
-Then, we can set each pixel colour using the `PerPixel()` function at the appropriate location:
+We have to typecast the variables as float to perform float division, if not it will perform integer division.
+
+We can then set each pixel colour using the `PerPixel()` function at the appropriate coordinate:
 
 ```cpp
 m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
@@ -958,7 +802,7 @@ m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
 
 We are multiplying the $y$ coordinate by how large each row supposedly is.
 
-Now, it is the responsiblity of the `PerPixel()` function to provide some sort of colour. <br> For now, we will set each pixel to green:
+The `PerPixel()` function is responsible for providing a colour for each pixel. For now, we will set each pixel to green:
 
 ```cpp
 uint32_t Renderer::PerPixel(glm::vec2 coord)
@@ -967,10 +811,12 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 }
 ```
 
-The result is:
-![image](https://user-images.githubusercontent.com/108275763/226174453-5257bcf3-7e46-4e28-8c9a-57b75145260b.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/226174453-5257bcf3-7e46-4e28-8c9a-57b75145260b.png">
+<figcaption>Figure 24. Using the PerPixel function to return a single colour.</figcaption>
+</figure><br/><br/>
 
-Let's try to imitate the output of code we used in Shadertoy:
+We can recreate the Shadertoy pixel shader here:
 
 ```cpp
 uint32_t Renderer::PerPixel(glm::vec2 coord)
@@ -984,12 +830,17 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 
 Here we are setting the red channel to the `x` coordinate and green to the `y` coordinate.
 
-The result is:
-![image](https://user-images.githubusercontent.com/108275763/226175125-1ed5b48c-8e7e-48f4-b08e-cccbbdbc4b7f.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/226175125-1ed5b48c-8e7e-48f4-b08e-cccbbdbc4b7f.png">
+<figcaption>Figure 25. Recreating the Shadertoy pixel shader.</figcaption>
+</figure><br/><br/>
 
 The image is flipped upside down because of how ImGui displays the image. We have to add another parameter to `ImGui::Image` (the `uv0` and `uv1` parameters) as seen below:
 
-![image](https://user-images.githubusercontent.com/108275763/226175271-b43e3223-d393-4378-a7a3-c05ccb4bbb71.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/226175271-b43e3223-d393-4378-a7a3-c05ccb4bbb71.png">
+<figcaption>Figure 26. ImGui Image parameters.</figcaption>
+</figure><br/><br/>
 
 ```cpp
 if (image)
@@ -1000,191 +851,27 @@ if (image)
 }
 ```
 
-We are reversing the `uv` coordinate of the $y$ axis. The `v` of the `uv` has now been inverted, and our image is now flipped right side up. <br> Run the program again and this is what we get:
+We are reversing the `uv` coordinate of the $y$ axis. The `v` of the `uv` has now been inverted, and our image is now flipped right side up. Run the program again and this is what we get:
 
-![image](https://user-images.githubusercontent.com/108275763/226175456-26bb06b1-2ac1-4f42-9e5b-8a3fb8caf0f1.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/226175456-26bb06b1-2ac1-4f42-9e5b-8a3fb8caf0f1.png">
+<figcaption>Figure 27. Corrected recreation of the pixel shader.</figcaption>
+</figure><br/><br/>
 
-We can also check the `OnResize()` function here:
+We can also test the `OnResize()` function here:
 
-![RayTracing_dWHEgBvw9y](https://user-images.githubusercontent.com/108275763/226175514-0e13f6c4-0762-48a9-a195-b19c827e7855.gif)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/226175514-0e13f6c4-0762-48a9-a195-b19c827e7855.gif">
+<figcaption>Figure 28. Testing the OnResize() function.</figcaption>
+</figure><br/><br/>
 
-This coordinate system and the `PerPixel()` function is what we will be using to decide where to shoot our rays from the camera to see if they intersect with our sphere.
+This coordinate system and the `PerPixel()` function is what we will be using to decide where to shoot our rays from and see if they intersect with the sphere.
 
-The code at this point looks like this:
+The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/430039cafc33cf48d6ec4511cdf419ac265e1b5a/RayTracing/src).
 
-`Renderer.h`
-```cpp
-#pragma once
+## 3.3: Rendering the sphere
 
-#include "Walnut/Image.h"
-
-#include <memory>
-#include <glm/glm.hpp>
-
-class Renderer
-{
-public:
-	Renderer() = default;
-
-	void OnResize(uint32_t width, uint32_t height);
-	void Render();
-
-	std::shared_ptr<Walnut::Image> GetFinalImage() const { return m_FinalImage; }
-private:
-	uint32_t PerPixel(glm::vec2 coord);
-private:
-	std::shared_ptr<Walnut::Image> m_FinalImage;
-	uint32_t* m_ImageData = nullptr;
-};
-```
-
-`Renderer.cpp`
-```cpp
-#include "Renderer.h"
-
-#include "Walnut/Random.h"
-
-void Renderer::OnResize(uint32_t width, uint32_t height)
-{
-	if (m_FinalImage)
-	{
-		// No resize necessary
-		if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height)
-			return;
-
-		m_FinalImage->Resize(width, height);
-	}
-	else
-	{
-		m_FinalImage = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
-	}
-
-	delete[] m_ImageData;
-	m_ImageData = new uint32_t[width * height];
-}
-
-void Renderer::Render()
-{
-	for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
-	{
-		for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
-		{
-			// assign a coordinate
-			glm::vec2 coord = { (float)x / (float)m_FinalImage->GetWidth(), (float)y / (float)m_FinalImage->GetHeight() };
-
-			// set the pixel colour to each pixel
-			m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
-		}
-	}
-
-	m_FinalImage->SetData(m_ImageData);
-}
-
-uint32_t Renderer::PerPixel(glm::vec2 coord)
-{
-	uint8_t r = (uint8_t)(coord.x * 255.0f);
-	uint8_t g = (uint8_t)(coord.y * 255.0f);
-	return 0xff000000 | (g << 8) | r;
-}
-
-```
-
-`WalnutApp.cpp`
-```cpp
-#include "Walnut/Application.h"
-#include "Walnut/EntryPoint.h"
-
-#include "Walnut/Image.h"
-#include "Walnut/Timer.h"
-
-#include "Renderer.h"
-
-using namespace Walnut;
-
-class ExampleLayer : public Walnut::Layer
-{
-public:
-	virtual void OnUIRender() override
-	{
-		ImGui::Begin("Settings");
-
-		ImGui::Text("Last render: %.3fms", m_LastRenderTime);
-
-		if (ImGui::Button("Render"))
-		{
-			// this renders every frame.
-			Render();
-		}
-
-		ImGui::End();
-
-		// gets rid of border around the viewport
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-
-		// this is the camera
-		ImGui::Begin("Viewport");
-		
-		// these are float values
-		m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
-		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
-		
-		auto image = m_Renderer.GetFinalImage();
-
-		if (image)
-		{
-			// if there is an image, then display the image
-			ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() },
-				ImVec2(0, 1), ImVec2(1, 0));
-		}
-
-		ImGui::End();
-		ImGui::PopStyleVar();
-
-		Render();
-	}
-
-	void Render() 
-	{
-		Timer timer;
-
-		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
-		m_Renderer.Render();
-
-		m_LastRenderTime = timer.ElapsedMillis();
-	}
-
-private:
-	Renderer m_Renderer;
-	// buffer for image data
-	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
-	float m_LastRenderTime = 0.0f;
-};
-
-Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
-{
-	Walnut::ApplicationSpecification spec;
-	spec.Name = "RayTracing";
-
-	Walnut::Application* app = new Walnut::Application(spec);
-	app->PushLayer<ExampleLayer>();
-	app->SetMenubarCallback([app]()
-	{
-		if (ImGui::BeginMenu("File"))
-		{
-			if (ImGui::MenuItem("Exit"))
-			{
-				app->Close();
-			}
-			ImGui::EndMenu();
-		}
-	});
-	return app;	
-}
-```
-
-## Section 3.3: Rendering the sphere
-
-Let's attempt to write code using the mathematics in Section 2. Recall that we've done the maths in 2D, but here we will be implementing it in 3D. As such, we have to add an extra $z$ axis to our equations to account for the $z$ dimension.
+In this section, we will implement the mathematics in Section 2 into code. Recall that we have conducted the mathematics in 2D, but here we will be implementing it in 3D. As such, we have to add an extra $z$ axis to our equations to account for the $z$ dimension.
 
 The quadratic equation for $t$ was:
 $$(b_x^2 +b_y^2)t^2 + (2a_xb_x + 2a_yb_y)t + (a_x^2 + a_y^2 - 4) = 0$$
@@ -1192,11 +879,11 @@ $$(b_x^2 +b_y^2)t^2 + (2a_xb_x + 2a_yb_y)t + (a_x^2 + a_y^2 - 4) = 0$$
 We can simplify the equation further:
 $$(b_x^2 +b_y^2)t^2 + (2(a_xb_x + a_yb_y))t + (a_x^2 + a_y^2 - r^2) = 0$$
 
-$t$ is what we are solving for, which is the distance along that ray. The unknown variables that we have are $a$ and $b$ and $r$.
+We are solving for $t$ , which is the distance along that ray. The unknown variables that we have are $a$, $b$, and $r$.
 
 ```cpp
 // (bx^2 + by^2)t^2 + (2(axbx + ayby))t + (ax^2 + ay^2 - r^2) = 0
-// where
+// 
 // a = ray origin
 // b = ray direction
 // r = radius
@@ -1207,42 +894,46 @@ We will name the variables `a`, `b`, and `c` because that is how they appear in 
 
 $$x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$$
 
-Recall that $a$, $b$, and $c$ are the coefficients of the quadratic equation.
+Recall that $a$, $b$, and $c$ are coefficients of the quadratic equation.
 
-Suppose that we have a camera at $(0,0,0)$. All we have to do to calculate a ray per pixel is by using the coordinate that we have. The current setup we have for the coordinate is that it goes from $(0,0)$ to $(1,1)$. If we are using this as the direction, we would only shoot out our rays like so:
+Suppose that we have a camera at $(0,0,0)$. To calculate a ray per pixel, we can use the input coordinate of the `PerPixel()` function. The current setup for the coordinate system is that it goes from $(0,0)$ to $(1,1)$. If we are using this as the direction, we would only shoot out our rays like so:
 
-![image](https://user-images.githubusercontent.com/108275763/226182672-99733608-fd60-4202-a526-64aa4656ff56.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/226182672-99733608-fd60-4202-a526-64aa4656ff56.png">
+<figcaption>Figure 29. Current coordinate system.</figcaption>
+</figure><br/><br/>
 
-We can remap the coordiantes to go from $-1$ to $1$ rather than $0$ to $1$:
+We can remap the coordinates to go from $-1$ to $1$ rather than $0$ to $1$:
 
 ```cpp
 // remap to -1 -> 1
 coord = coord * 2.0f - 1.0f; 
 ```
 
-We've done this before in the Algorithms module, where the output is refactored into a different scale.
+The first variable `a` can then be calculated like so:
 
 ```cpp
 float a = coord.x * coord.x + coord.y * coord.y + coord.z * coord.z;
 ```
 
-Currently, the coordinate is of data type vec2.
+Currently, the coordinate is of data type `vec2`. However, our coordinate system will use `vec3`.
 
-- How do we deal with this?
+Let us reimagine the scene again, except this time, the $y$ axis is flipped by $90\degree$:
 
-Let us reimagine the ray tracing scene again, except this time, the $y$ axis is flipped $90\degree$:
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/226183557-d6ad7dee-b986-4680-8aa5-c60687c82c8a.png">
+<figcaption>Figure 30. Flipping the scene by 90 degrees.</figcaption>
+</figure><br/><br/>
 
-![image](https://user-images.githubusercontent.com/108275763/226183557-d6ad7dee-b986-4680-8aa5-c60687c82c8a.png)
+A 3D coordinate system will have depth to it, so we will add a `z` axis with a range of $-1$ to $1$.
 
-We want the scene to have some sort of depth to it, so we will add a `z` coordinate with a range of $-1$ to $1$.
-
-We will use $-1$ for now (OpenGL treats this as the forward direction), though it depends on if you are dealing with a left handed coordinate system or a right handed system.
+[OpenGL](https://learnopengl.com/Getting-started/Coordinate-Systems) uses a right-handed coordinate system where the positive $z$-direction [points out the page](https://pbr-book.org/3ed-2018/Geometry_and_Transformations/Coordinate_Systems). As such, $-1$ is the forward direction:
 
 ```cpp
 glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
 ```
 
-If we want this as a unit vector, we can normalise it:
+We can transform this to a unit vector using `glm::normalize()`:
 
 ```cpp
 rayDirection = glm::normalize(rayDirection);
@@ -1252,7 +943,7 @@ rayDirection = glm::normalize(rayDirection);
 float a = rayDirection.x * rayDirection.x + rayDirection.y * rayDirection.y + rayDirection.z * rayDirection.z;
 ```
 
-This is actually the dot product of the ray direction with itself. We are multiplying each term by itself and adding up the value to a float. We can rewrite this like so:
+This is actually the [dot product of the ray direction with itself](https://www.youtube.com/watch?v=piMDQD8Igg8). We are multiplying each term by itself and adding up the value to a float. We can rewrite this like so:
 
 ```cpp
 float a = glm::dot(rayDirection, rayDirection);
@@ -1260,13 +951,13 @@ float a = glm::dot(rayDirection, rayDirection);
 
 Now we have our $a$ coefficient.
 
-$b$ is actually also a dot product, because we are multiplying each component of the ray origin and each component of the ray direction and adding them up:
+Variable `b` is actually also a dot product, because we are multiplying each component of the ray origin and each component of the ray direction and adding them up:
 
 ```cpp
 float b = 2.0f * glm::dot(rayOrigin, rayDirection);
 ```
 
-Similarly, $c$ is a dot product of the ray origin and itself, minus the radius squared:
+Similarly, variable `c` is a dot product of the ray origin and itself, minus the radius squared:
 
 ```cpp
 float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
@@ -1283,7 +974,7 @@ float discriminant = b * b - 4.0f * a * c;
 
 We can now check if the ray hits the object depending on the value of the discriminant:
 
-Result | # Solutions
+Result | # of Solutions
 --- | ---
 $>0$ | 2 Solutions
 $=0$ | 1 Solution
@@ -1303,241 +994,51 @@ if (discriminant >= 0.0f)
 
 return 0xff000000;
 ```
-If we hit the sphere, we should see a green colour. Else, it is black.
+If we hit the sphere, we should see a green colour. Else, it returns black.
 
-Hit F5 and we get:
+Hit F5 and the program returns:
 
-![image](https://user-images.githubusercontent.com/108275763/226185270-8f7efaad-3e8a-470d-a39f-4c9cd54fe5b9.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/226185270-8f7efaad-3e8a-470d-a39f-4c9cd54fe5b9.png">
+<figcaption>Figure 31. Running the ray-sphere intersection code for the first time.</figcaption>
+</figure><br/><br/>
 
-It seems that we hit the sphere. Think of it this way:
+It seems that every pixel returns green, so this means that every pixel is a ray-sphere intersect.
 
-The ray origin is at $(0,0,0)$ and the sphere origin is also at $(0,0,0)$. To visualise, that looks like this:
+The ray origin is at $(0,0,0)$ and the sphere origin is also at $(0,0,0)$. This is visualised below:
 
-![image](https://user-images.githubusercontent.com/108275763/226185573-2e5bcbe3-abda-4210-b53b-f4ec853eb410.png)
+<figure>
+<img src="https://i.imgur.com/ixncpPM.png">
+<figcaption>Figure 32. What happens when the ray origin and sphere origin share the same coordinates.</figcaption>
+</figure><br/><br/>
 
-Essentially, the ray is inside the sphere, and the sphere is filling up the viewport. We can move the sphere back from the viewport by translating it in the $z$ axis such that it does not fill the camera viewport. 
+Essentially, the ray is inside the sphere and the sphere is filling up the viewport. 
 
-Alternatively, we could move the camera back:
+We can move the sphere in the $-z$ direction such that it does not fill the camera viewport. Alternatively, we could move the ray origin in the $+z$ direction:
 
 ```cpp
-glm::vec3 rayOrigin(0.0f, 0.0f, -2.0f);
+glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
 ```
 
-The result is:
+Now the program returns:
 
-![image](https://user-images.githubusercontent.com/108275763/226185723-5938e105-856e-41b0-a92a-151e61d003b7.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/226185723-5938e105-856e-41b0-a92a-151e61d003b7.png">
+<figcaption>Figure 33. A render of a sphere.</figcaption>
+</figure><br/><br/>
 
-This visually looks like a circle, but it is actually a sphere in 3D space. It is hard to tell because of the flat lighting.
+Visually this looks like a circle, but it is actually a sphere in 3D space. It is hard to tell because of the flat lighting.
 
 Another problem is that when we resize the viewport, the circle gets stretched:
 
-![RayTracing_G0ssGR5DS5](https://user-images.githubusercontent.com/108275763/226185950-d3c6ddb0-527d-4279-a41b-300f3bc3a08f.gif)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/226185950-d3c6ddb0-527d-4279-a41b-300f3bc3a08f.gif">
+<figcaption>Figure 34. Resizing the render of the sphere.</figcaption>
+</figure><br/><br/>
 
-Currently there is no concept of aspect ratio in the code. We are still in the $-1$ to $1$ space, horizontally and vertically. We will fix this in the section.
+Currently there is no concept of aspect ratio in the code. We are still in the $-1$ to $1$ space, horizontally and vertically. We will fix this in the next section.
 
-For now, the code looks like this:
-
-`Renderer.h`
-```cpp
-#pragma once
-
-#include "Walnut/Image.h"
-
-#include <memory>
-#include <glm/glm.hpp>
-
-class Renderer
-{
-public:
-	Renderer() = default;
-
-	void OnResize(uint32_t width, uint32_t height);
-	void Render();
-
-	std::shared_ptr<Walnut::Image> GetFinalImage() const { return m_FinalImage; }
-private:
-	uint32_t PerPixel(glm::vec2 coord);
-private:
-	std::shared_ptr<Walnut::Image> m_FinalImage;
-	uint32_t* m_ImageData = nullptr;
-};
-```
-
-
-`Renderer.cpp`
-```cpp
-#include "Renderer.h"
-
-#include "Walnut/Random.h"
-
-void Renderer::OnResize(uint32_t width, uint32_t height)
-{
-	if (m_FinalImage)
-	{
-		// No resize necessary
-		if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height)
-			return;
-
-		m_FinalImage->Resize(width, height);
-	}
-	else
-	{
-		m_FinalImage = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
-	}
-
-	delete[] m_ImageData;
-	m_ImageData = new uint32_t[width * height];
-}
-
-void Renderer::Render()
-{
-	for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
-	{
-		for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
-		{
-			// assign a coordinate
-			glm::vec2 coord = { (float)x / (float)m_FinalImage->GetWidth(), (float)y / (float)m_FinalImage->GetHeight() };
-			// remap to -1 -> 1
-			coord = coord * 2.0f - 1.0f; 
-
-			// set the pixel colour to each pixel
-			m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
-		}
-	}
-
-	m_FinalImage->SetData(m_ImageData);
-}
-
-uint32_t Renderer::PerPixel(glm::vec2 coord)
-{
-	glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
-	glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
-	float radius = 0.5f;
-	// rayDirection = glm::normalize(rayDirection);
-
-	// (bx^2 + by^2)t^2 + (2(axbx + ayby))t + (ax^2 + ay^2 - r^2) = 0
-	// where
-	// a = ray origin
-	// b = ray direction
-	// r = radius
-	// t = hit distance
-
-	// float a = rayDirection.x * rayDirection.x + rayDirection.y * rayDirection.y + rayDirection.z * rayDirection.z;
-	float a = glm::dot(rayDirection, rayDirection);
-	float b = 2.0f * glm::dot(rayOrigin, rayDirection);
-	float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
-
-	// quadratic formula discriminant
-	// b^2 - 4ac
-
-	float discriminant = b * b - 4.0f * a * c;
-
-	// > 0, 2 solutions
-	// = 0, 1 solution
-	// < 0, 0 solutions
-
-	if (discriminant >= 0.0f)
-	{
-		return 0xff00ff00;
-	}
-
-	return 0xff000000;
-}
-
-```
-
-`WalnutApp.cpp`
-```cpp
-#include "Walnut/Application.h"
-#include "Walnut/EntryPoint.h"
-
-#include "Walnut/Image.h"
-#include "Walnut/Timer.h"
-
-#include "Renderer.h"
-
-using namespace Walnut;
-
-class ExampleLayer : public Walnut::Layer
-{
-public:
-	virtual void OnUIRender() override
-	{
-		ImGui::Begin("Settings");
-
-		ImGui::Text("Last render: %.3fms", m_LastRenderTime);
-
-		if (ImGui::Button("Render"))
-		{
-			// this renders every frame.
-			Render();
-		}
-
-		ImGui::End();
-
-		// gets rid of border around the viewport
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-
-		// this is the camera
-		ImGui::Begin("Viewport");
-		
-		// these are float values
-		m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
-		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
-		
-		auto image = m_Renderer.GetFinalImage();
-
-		if (image)
-		{
-			// if there is an image, then display the image
-			ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() },
-				ImVec2(0, 1), ImVec2(1, 0));
-		}
-
-		ImGui::End();
-		ImGui::PopStyleVar();
-
-		Render();
-	}
-
-	void Render() 
-	{
-		Timer timer;
-
-		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
-		m_Renderer.Render();
-
-		m_LastRenderTime = timer.ElapsedMillis();
-	}
-
-private:
-	Renderer m_Renderer;
-	// buffer for image data
-	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
-	float m_LastRenderTime = 0.0f;
-};
-
-Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
-{
-	Walnut::ApplicationSpecification spec;
-	spec.Name = "RayTracing";
-
-	Walnut::Application* app = new Walnut::Application(spec);
-	app->PushLayer<ExampleLayer>();
-	app->SetMenubarCallback([app]()
-	{
-		if (ImGui::BeginMenu("File"))
-		{
-			if (ImGui::MenuItem("Exit"))
-			{
-				app->Close();
-			}
-			ImGui::EndMenu();
-		}
-	});
-	return app;	
-}
-```
+The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/36b8991d39a194ca2fcd1f221e37f8f6a283bfa5/RayTracing/src).
 
 # Section 4: Ray casting and sphere intersection
 
