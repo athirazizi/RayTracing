@@ -81,7 +81,7 @@ glm::vec4 Renderer::TraceRay(const Ray& ray)
 	float discriminant = b * b - 4.0f * a * c;
 	if (discriminant < 0.0f)
 	{
-		return glm::vec4(1, 1, 1, 1); // return black
+		return glm::vec4(.1, .1, .1, 1); // return a colour in RGBA
 	}
 
 	// (-b +- sqrt(discriminant)) / 2a
@@ -98,6 +98,7 @@ glm::vec4 Renderer::TraceRay(const Ray& ray)
 	glm::vec3 hitPoint = ray.Origin + ray.Direction * closestT;
 	glm::vec3 normal = glm::normalize(hitPoint);
 
+	// you can change the light direction here
 	glm::vec3 lightDir = glm::normalize(glm::vec3(-1,-1,-1));
 	
 	// dot(normal, -lightDir) == cos(angle)

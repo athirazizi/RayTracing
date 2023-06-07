@@ -1315,202 +1315,27 @@ The code at this point can be seen [here](https://github.com/athirazizi/RayTraci
 
 ## 5.1 How 3D Cameras Work
 
-Functionality wise, the user will have access to moving the position of the camera using the `W,A,S,D` keys on the keyboard, and moving where the camera faces using the mouse.
+Functionality wise, the user will have access to moving the position of the camera using the `W,A,S,D` keys on the keyboard, and moving the camera direction using the mouse.
 
-This also happens to be the traditional method used in first-person 3D video games, or any real time rasterisation applications.
+This happens to be the traditional method used in modern first-person 3D video games, or any real time rasterisation/ray tracing applications.
 
-The camera has two properties: the position (ray origin) and the ray direction. The camera is implemented in code like so:
+The camera has two properties: the position (ray origin) and the ray direction. Currently the camera is implemented like so:
 
 ```cpp
 glm::vec3 rayOrigin(0.0f, 0.0f, 1.0f);
 glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
 ```
 
-Currently, there is no way to rotate the camera or to adjust the field of view due to the static implementation of the origin and direction. 
+Essentially the rays are being sent out from the camera. Currently, there is no way to rotate the camera or adjust the field of view due to the static implementation of the origin and direction. 
 
 ## 5.2 The Camera Class Overview
 
-The latest version of walnut contains a `Camera` class. This can be seen here:
+The latest version of Walnut contains a `Camera` class. This can be seen here:
 
-<details>
-<summary>Click here to view code</summary>
+- [Camera.h](https://github.com/athirazizi/RayTracing/blob/c2bde46b7204a39fb344536672e427fd92949631/RayTracing/src/Camera.h)
+- [Camera.cpp](https://github.com/athirazizi/RayTracing/blob/c2bde46b7204a39fb344536672e427fd92949631/RayTracing/src/Camera.cpp)
 
-`Camera.h`
-```cpp
-#pragma once
-
-#include <glm/glm.hpp>
-#include <vector>
-
-class Camera {
-public:
-	Camera(float verticalFOV, float nearClip, float farClip);
-
-	bool OnUpdate(float ts);
-	void OnResize(uint32_t width, uint32_t height);
-
-	const glm::mat4& GetProjection() const { return m_Projection; }
-	const glm::mat4& GetInverseProjection() const { return m_InverseProjection; }
-	const glm::mat4& GetView() const { return m_View; }
-	const glm::mat4& GetInverseView() const { return m_InverseView; }
-
-	const glm::vec3& GetPosition() const { return m_Position; }
-	const glm::vec3& GetDirection() const { return m_ForwardDirection; }
-
-	const std::vector<glm::vec3>& GetRayDirections() const { return m_RayDirections; }
-
-	float GetRotationSpeed();
-private:
-	void RecalculateProjection();
-	void RecalculateView();
-	void RecalculateRayDirections();
-private:
-	glm::mat4 m_Projection{ 1.0f };
-	glm::mat4 m_View{ 1.0f };
-	glm::mat4 m_InverseProjection{ 1.0f };
-	glm::mat4 m_InverseView{ 1.0f };
-
-	float m_VerticalFOV = 45.0f;
-	float m_NearClip = 0.1f;
-	float m_FarClip = 100.0f;
-
-	glm::vec3 m_Position{ 0.0f, 0.0f, 0.0f };
-	glm::vec3 m_ForwardDirection{ 0.0f, 0.0f, 0.0f };
-
-	// Cached ray directions
-	std::vector<glm::vec3> m_RayDirections;
-
-	glm::vec2 m_LastMousePosition{ 0.0f, 0.0f };
-
-	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
-};
-
-```
-
-`Camera.cpp`
-```cpp
-#include "Camera.h"
-
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/quaternion.hpp>
-
-#include "Walnut/Input/Input.h"
-
-using namespace Walnut;
-
-Camera::Camera(float verticalFOV, float nearClip, float farClip)
-	: m_VerticalFOV(verticalFOV), m_NearClip(nearClip), m_FarClip(farClip) {
-	m_ForwardDirection = glm::vec3(0, 0, -1);
-	m_Position = glm::vec3(0, 0, 6);
-}
-
-bool Camera::OnUpdate(float ts) {
-	glm::vec2 mousePos = Input::GetMousePosition();
-	glm::vec2 delta = (mousePos - m_LastMousePosition) * 0.002f;
-	m_LastMousePosition = mousePos;
-
-	if (!Input::IsMouseButtonDown(MouseButton::Right)) {
-		Input::SetCursorMode(CursorMode::Normal);
-		return false;
-	}
-
-	Input::SetCursorMode(CursorMode::Locked);
-
-	bool moved = false;
-
-	constexpr glm::vec3 upDirection(0.0f, 1.0f, 0.0f);
-	glm::vec3 rightDirection = glm::cross(m_ForwardDirection, upDirection);
-
-	float speed = 5.0f;
-
-	// Movement
-	if (Input::IsKeyDown(KeyCode::W)) {
-		m_Position += m_ForwardDirection * speed * ts;
-		moved = true;
-	} else if (Input::IsKeyDown(KeyCode::S)) {
-		m_Position -= m_ForwardDirection * speed * ts;
-		moved = true;
-	}
-	if (Input::IsKeyDown(KeyCode::A)) {
-		m_Position -= rightDirection * speed * ts;
-		moved = true;
-	} else if (Input::IsKeyDown(KeyCode::D)) {
-		m_Position += rightDirection * speed * ts;
-		moved = true;
-	}
-	if (Input::IsKeyDown(KeyCode::Q)) {
-		m_Position -= upDirection * speed * ts;
-		moved = true;
-	} else if (Input::IsKeyDown(KeyCode::E)) {
-		m_Position += upDirection * speed * ts;
-		moved = true;
-	}
-
-	// Rotation
-	if (delta.x != 0.0f || delta.y != 0.0f) {
-		float pitchDelta = delta.y * GetRotationSpeed();
-		float yawDelta = delta.x * GetRotationSpeed();
-
-		glm::quat q = glm::normalize(glm::cross(glm::angleAxis(-pitchDelta, rightDirection),
-			glm::angleAxis(-yawDelta, glm::vec3(0.f, 1.0f, 0.0f))));
-		m_ForwardDirection = glm::rotate(q, m_ForwardDirection);
-
-		moved = true;
-	}
-
-	if (moved) {
-		RecalculateView();
-		RecalculateRayDirections();
-	}
-
-	return moved;
-}
-
-void Camera::OnResize(uint32_t width, uint32_t height) {
-	if (width == m_ViewportWidth && height == m_ViewportHeight)
-		return;
-
-	m_ViewportWidth = width;
-	m_ViewportHeight = height;
-
-	RecalculateProjection();
-	RecalculateRayDirections();
-}
-
-float Camera::GetRotationSpeed() {
-	return 0.3f;
-}
-
-void Camera::RecalculateProjection() {
-	m_Projection = glm::perspectiveFov(glm::radians(m_VerticalFOV), (float)m_ViewportWidth, (float)m_ViewportHeight, m_NearClip, m_FarClip);
-	m_InverseProjection = glm::inverse(m_Projection);
-}
-
-void Camera::RecalculateView() {
-	m_View = glm::lookAt(m_Position, m_Position + m_ForwardDirection, glm::vec3(0, 1, 0));
-	m_InverseView = glm::inverse(m_View);
-}
-
-void Camera::RecalculateRayDirections() {
-	m_RayDirections.resize(m_ViewportWidth * m_ViewportHeight);
-
-	for (uint32_t y = 0; y < m_ViewportHeight; y++) {
-		for (uint32_t x = 0; x < m_ViewportWidth; x++) {
-			glm::vec2 coord = { (float)x / (float)m_ViewportWidth, (float)y / (float)m_ViewportHeight };
-			coord = coord * 2.0f - 1.0f; // -1 -> 1
-
-			glm::vec4 target = m_InverseProjection * glm::vec4(coord.x, coord.y, 1, 1);
-			glm::vec3 rayDirection = glm::vec3(m_InverseView * glm::vec4(glm::normalize(glm::vec3(target) / target.w), 0)); // World space
-			m_RayDirections[x + y * m_ViewportWidth] = rayDirection;
-		}
-	}
-}
-
-```
-</details>
-
-This camera system is similar to Unity/Unreal Engine which allows the user to hold right click to rotate the camera and use `W,A,S,D` to move within the environment. 
+This camera system is similar to [Unity](https://docs.unity3d.com/Manual/class-Camera.html)/[Unreal Engine](https://docs.unrealengine.com/4.26/en-US/InteractiveExperiences/UsingCameras/) which allows the user to hold right click to rotate the camera and use `W,A,S,D` to move within the environment. 
 
 The Camera constructor takes in the verticalFOV, a nearClip and a farClip:
 
@@ -1518,15 +1343,14 @@ The Camera constructor takes in the verticalFOV, a nearClip and a farClip:
 Camera(float verticalFOV, float nearClip, float farClip);
 ```
 
-These parameters can be visualised in the image below:
+These parameters are visualised in the figure below:
 
-![image](https://user-images.githubusercontent.com/108275763/234670873-b9c32829-6350-48df-99c9-839e90317328.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/234670873-b9c32829-6350-48df-99c9-839e90317328.png">
+<figcaption>Figure 46. A viewing frustum. Adapted from <a href="https://en.wikipedia.org/wiki/Viewing_frustum#/media/File:ViewFrustum.svg">wikipedia</a>.</figcaption>
+</figure><br/><br/>
 
-Figure: A viewing frustum.
-
-Source: Adapted from wikipedia
-
-A viewing frustum represents the field of view of the camera in a 3D region. The near plane indicated in yellow is the `nearClip` and the far plane indicated in blue is the `farClip`. Anything outside of this frustum is not rendered in the final scene.
+A viewing frustum represents the camera field of view in a 3D region. The near plane indicated in yellow is the `nearClip` and the far plane indicated in blue is the `farClip`. Anything outside of this frustum is not rendered in the final scene because they are out of sight.
 
 There are also various utility functions which we can use :
 ```cpp
@@ -1540,27 +1364,35 @@ const std::vector<glm::vec3>& GetRayDirections() const { return m_RayDirections;
 float GetRotationSpeed();
 ```
 
-The function `OnUpdate` is called every frame with the timestep (which allows us to move at constant speed, independent of the frame rate):
-
-<details>
-<summary>Click here to view OnUpdate</summary>
+The function `OnUpdate()` is called every frame with the timestep (which allows the camera to move at constant speed, independent of the frame rate):
 
 ```cpp
 bool Camera::OnUpdate(float ts) {
+	// Capture mouse input
 	glm::vec2 mousePos = Input::GetMousePosition();
+
+	// Calculate position moved with the mouse
 	glm::vec2 delta = (mousePos - m_LastMousePosition) * 0.002f;
 	m_LastMousePosition = mousePos;
 
+	// If right click is now held down, return
+	// Camera movement is only active when right click is held
 	if (!Input::IsMouseButtonDown(MouseButton::Right)) {
 		Input::SetCursorMode(CursorMode::Normal);
 		return false;
 	}
 
+	// Locks cursor to window and hides the cursor
 	Input::SetCursorMode(CursorMode::Locked);
 
+	// Used to check if ray directions and matrices need to be recalculated 
 	bool moved = false;
 
+	// Calculate the y direction of the camera
 	constexpr glm::vec3 upDirection(0.0f, 1.0f, 0.0f);
+
+	// Calculate the right direction, which is the cross product
+	// between the forward direction and the up direction
 	glm::vec3 rightDirection = glm::cross(m_ForwardDirection, upDirection);
 
 	float speed = 5.0f;
@@ -1590,9 +1422,12 @@ bool Camera::OnUpdate(float ts) {
 
 	// Rotation
 	if (delta.x != 0.0f || delta.y != 0.0f) {
+		
 		float pitchDelta = delta.y * GetRotationSpeed();
+		
 		float yawDelta = delta.x * GetRotationSpeed();
 
+		// Captures the delta in all axes
 		glm::quat q = glm::normalize(glm::cross(glm::angleAxis(-pitchDelta, rightDirection),
 			glm::angleAxis(-yawDelta, glm::vec3(0.f, 1.0f, 0.0f))));
 		m_ForwardDirection = glm::rotate(q, m_ForwardDirection);
@@ -1608,31 +1443,24 @@ bool Camera::OnUpdate(float ts) {
 	return moved;
 }
 ```
-</details>
 
-`OnUpdate` captures the delta of the mouse position from the previous frame to the current frame. This value should constantly be updated to make the system feel more responsive. 
+`OnUpdate()` captures the delta of the mouse position from the previous frame to the current frame. This value is updated constantly (using each timestep) to make the system feel more responsive. 
 
 If right click is not held down, the cursor mode is set to normal and it returns nothing. Else, we lock the cursor to the window and hide the cursor.
 
 The `moved` flag is used to check if we need to recalculate the ray directions and matrices. 
 
-The `upDirection` vector captures the y-directional vector.
+The `upDirection` vector captures the $y$-directional vector.
 
-The `rightDirection` vector captures the x-directional vector. This is the cross product of the `upDirection` and `m_ForwardDirection`.
+The `rightDirection` vector captures the $x$-directional vector. This is the cross product of the `upDirection` and `m_ForwardDirection`.
 
-Note that with this current setup the camera cannot be tilted along the z-axis.
+The `W,A,S,D` keys are used as input keys:
 
-The WASD are used as input keys:
+If the user presses `W`, the camera moves forward. The distance it moves forward is multiplied by a fixed `speed` and `ts` (timestep, so the movement is scaled appropriately based on how fast the program is running). Similarly, the `S` key moves backwards, `D` moves to the right, `A` moves to the left. `E` moves the position of the camera upwards, and `Q` downwards. Additionally, the `moved` flag is set to true so the ray directions are recalculated. We can change the input keys using the `KeyCode` if the user prefers another movement setup.
 
-If the user presses `W`, the camera moves forward. The distance it moves forward is multiplied by a fixed `speed` and `ts` (timestep, so the movement is scaled appropriately based on how fast the program is running). Similarly, the `S` key moves backwards, `D` moves to the right, `A` moves to the left. `E` moves the position of the camera upwards, and `Q` downwards. Additionally, the `moved` flag is set to true so the ray directions are recalculated. 
+Likewise, we will have to recalculate ray directions if the camera rotates. If the mouse moves up and down, the pitch will change depending on the `delta.y` component. If the mouse moves left and right, the yaw will change depending on the `delta.x` component.
 
-Likewise, we will have to recalculate ray directions if the camera rotates. If the mouse moves up and down, the pitch will change depending on the `delta.y` component. If the mouse moves left and right, the yaw will change depending on the `delta.x` component. For clarification, see the GIF below:
-
-[INSERT GIF HERE]
-
-The `pitchDelta` and `yawDelta` are used in a `glm::quat` quaternion, which captures the delta in all axes. This is used to produce a new forward direction by taking into account the quaternion. If the delta has changed in the x or y axis, then the view and the ray direction will have to be recalculated:
-
-[INSERT VIEW MATRIX HERE] https://forum.unity.com/threads/view-matrix-explanation.1198456/
+The `pitchDelta` and `yawDelta` are used in a `glm::quat` quaternion, which captures the delta in all axes. This is used to produce a new forward direction by taking into account the quaternion. If the delta has changed in the $x$ or $y$ axis, then the view and the ray direction will have to be recalculated. This can be summed up in a [view matrix](https://forum.unity.com/threads/view-matrix-explanation.1198456/).
 
 ```cpp
 void Camera::RecalculateView() {
@@ -1641,7 +1469,7 @@ void Camera::RecalculateView() {
 }
 ```
 
-This function assigns a position, a vector to look at, and an a y-directional vector to the `m_View` attribute. We also calculate the inverse view by inverting the view matrix.
+This function assigns a position, a vector to look at, and an a $y$-directional vector to the `m_View` attribute. We also calculate the inverse view by inverting the view matrix.
 
 The function `OnResize()` is used to recalculate the projection matrix:
 ```cpp
@@ -1659,8 +1487,6 @@ void Camera::OnResize(uint32_t width, uint32_t height) {
 
 `RecalculateProjection()` creates a perspective matrix based on the FOV, the viewport width & height to calculate the aspect ratio, as well as the near and far clip plane:
 
-[INSERT REFERENCE PICTURE HERE] www.songho.ca/opengl/gl_projectionmatrix.html
-
 ```cpp
 void Camera::RecalculateProjection() {
 	m_Projection = glm::perspectiveFov(glm::radians(m_VerticalFOV), (float)m_ViewportWidth, (float)m_ViewportHeight, m_NearClip, m_FarClip);
@@ -1668,15 +1494,20 @@ void Camera::RecalculateProjection() {
 }
 ```
 
-## 5.3 Calculating and Caching Per-Pixel Ray Directions
+<figure>
+<img src="http://www.songho.ca/opengl/files/gl_projectionmatrix01.png">
+<figcaption>Figure 47. Perspective frustum. Adapted from <a href="http://www.songho.ca/opengl/gl_projectionmatrix.html#perspective">OpenGL</a>.</figcaption>
+</figure><br/><br/>
 
-The camera has an attribute `m_RayDirections`: 
+## 5.3 Calculating & Caching Per-Pixel Ray Directions
+
+The Walnut camera has an attribute `m_RayDirections`: 
 
 ```cpp 
 std::vector<glm::vec3> m_RayDirections;
 ```
 
-It is associated with the `RecalculateRayDirections()` function which performs some cached calculations based on the view and projection matrices:
+It is associated with the `RecalculateRayDirections()` function which some cached calculations based on the view and projection matrices:
 
 ```cpp
 void Camera::RecalculateRayDirections() {
@@ -1697,41 +1528,43 @@ void Camera::RecalculateRayDirections() {
 
 Note that this code is similar to what we currently have in `Renderer::Render()`. 
 
-OpenGL and DirectX which uses column-major maths has matrices for projection, view, model, and a vertex position. [CITATION NEEDED]
+OpenGL and DirectX uses column-major maths which has matrices for [projection, view, model, and a vertex position](http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/#the-model-view-and-projection-matrices).
 
-In a vertex shader, the vertex position is multiplied by the transform to specify its position in world space. Then, this is further multiplied by the view matrix and the projection matrix. For HLSL or in row-major, we would perform the inverse of these operations.
+In a vertex shader, the vertex position is multiplied by the transform to specify its position in world space. Then, this is further multiplied by the view matrix and the projection matrix. 
 
-$vertex \cdot transform \cdot view \cdot projection$
+For HLSL or DirectX (row-major), we would perform the inverse of these operations:
 
-The GLSL code will look something like this:
+$$vertex \cdot transform \cdot view \cdot projection$$
 
-$projection \cdot view \cdot transform \cdot vertex$
+The GLSL, OpenGL, or Vulkan (column-major) maths, the order would look like this:
 
-This produces normalised device coordinates like clipping space (-1 to 1). We already know the NDC as these are our pixels. We are casting our ray in world space, but we are restricted in the -1 to 1 space. We can resolve this by multiplying the coordinate by the inverse of each matrix and perform a perspective division to get a coordinate in world space.
+$$projection \cdot view \cdot transform \cdot vertex$$
+
+This produces normalised device coordinates (NDC) which has a range of $-1$ to $1$. We already know the NDC as these are our pixels. We are ray casting in world space, but we are restricted in the $-1$ to $1$ range. We can resolve this by multiplying the coordinate by the inverse of each matrix and perform a perspective division to get a coordinate in world space.
 
 The `target` variable is an intermetiate vector which is the inverse projection multiplied by the coordinates.
 
 The `rayDirection` multiplies the inverse view matrix by the normalised target with a perspective division.
 
-We then cache the ray directions, as the normalisation operation and the matrix multiplication operations might slow the CPU down. SIMD performs these operations in fewer instructions, leading to faster execution [CITATION NEEDED]. Later on, this code will be refactored to be run on the GPU inside a shader (computer/raygen shader) where execution times will be fast.
+We then cache the ray directions, as the normalisation operation and the matrix multiplication operations might slow the CPU down. [Single instruction multiple data](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data) (SIMD) performs these operations in fewer instructions, leading to faster execution times. Later on, this code will be refactored to be run on the GPU inside a shader (computer/raygen shader) where execution times will be fast.
 
 ## 5.4 Using the Camera Class
 
-Recall that in `WalnutApp.cpp`, our functions are called the class `ExampleLayer`. 
+In `WalnutApp.cpp`, our functions are called in the class `ExampleLayer`.
 
 We can declare a camera as a member inside the Layer: 
 ```cpp
 Camera m_Camera
 ```
 
-and then define it in the constructor:
+and then define it in the constructor with the FOV, near clip, and farclip:
 
 ```cpp
 ExampleLayer()
 	: m_Camera(45.0f, 0.1f, 100.0f){}
 ```
 
-We will begin by overriding the function `OnUpdate()` in the `Layer` class. Here, we will update the camera:
+We can override the function `OnUpdate()` in the `Layer` class. Here, we will update the camera:
 
 ```cpp
 virtual void OnUpdate(float ts) override
@@ -1751,13 +1584,13 @@ and so we have to update the `Render()` function to take a camera as an input:
 void Render(const Camera& camera);
 ```
 
-As we loop through every pixel in the `Render()` function, we need to obtain the appropriate cached ray direction. For now, the ray origin is a fixed value.
+As we loop through every pixel in the `Render()` function, we need to obtain the appropriate cached ray direction. For now, the ray origin is a fixed value. Instead, we can change the ray origin to the current camera position.
 
 ```cpp
 const glm::vec3& rayOrigin = camera.GetPosition();
 ```
 
-The ray direction is used for every pixel coordinate so it is called inside the two loops:
+The ray direction is used for every pixel coordinate so it is called inside two loops for the rendered scene:
 
 ```cpp
 for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
@@ -1802,68 +1635,28 @@ void Renderer::Render(const Camera& camera)
 			glm::vec4 color = TraceRay(ray);
 ```
 
-Now, refactor `TraceRay()`:
-
-<details>
-<summary>Click here to view code</summary>
-
-```cpp
-glm::vec4 Renderer::TraceRay(const Ray& ray)
-{
-	float radius = 0.5f;
-	// rayDirection = glm::normalize(rayDirection);
-
-	// (bx^2 + by^2)t^2 + (2(axbx + ayby))t + (ax^2 + ay^2 - r^2) = 0
-	// where
-	// a = ray origin
-	// b = ray direction
-	// r = radius
-	// t = hit distance
-
-	// float a = rayDirection.x * rayDirection.x + rayDirection.y * rayDirection.y + rayDirection.z * rayDirection.z;
-	float a = glm::dot(ray.Direction, ray.Direction);
-	float b = 2.0f * glm::dot(ray.Origin, ray.Direction);
-	float c = glm::dot(ray.Origin, ray.Origin) - radius * radius;
-
-	// quadratic formula discriminant
-	// b^2 - 4ac
-
-	float discriminant = b * b - 4.0f * a * c;
-	if (discriminant < 0.0f)
-	{
-		return glm::vec4(0, 0, 0, 1); // return black
-	}
-
-	// (-b +- sqrt(discriminant)) / 2a
-	// 
-	// > 0, 2 solutions
-	// = 0, 1 solution
-	// < 0, 0 solutions
-
-	// plus variant
-	float t0 = (-b + glm::sqrt(discriminant)) / (2.0f * a);
-	// minus variant
-	float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
-
-	glm::vec3 hitPoint = ray.Origin + ray.Direction * closestT;
-	glm::vec3 normal = glm::normalize(hitPoint);
-
-	glm::vec3 lightDir = glm::normalize(glm::vec3(-1,-1,-1));
-	
-	// dot(normal, -lightDir) == cos(angle)
-	float d = glm::max(glm::dot(normal, -lightDir), 0.0f);
-
-	glm::vec3 sphereColor(0, 1, 0);
-	sphereColor *= d;
-	return glm::vec4(sphereColor, 1.0f);	
-}
-```
-</details>
+`TraceRay()` is refactored to use the new ray data structure and it can be seen [here](https://github.com/athirazizi/RayTracing/blob/c2bde46b7204a39fb344536672e427fd92949631/RayTracing/src/Renderer.cpp#L61).
 
 Hit F5 and we can test the new inputs:
 
-[INSERT GIF OF W MOVING FORWARD, A MOVING BACKWARD]
+<figure>
+<img src="https://i.imgur.com/sAWGYQj.gif">
+<figcaption>Figure 48. Camera movement in the x-axis.</figcaption>
+</figure><br/><br/>
 
-[INSERT GIF OF S MOVING LEFT, D MOVING RIGHT]
+<figure>
+<img src="https://i.imgur.com/sBn3JRt.gif">
+<figcaption>Figure 49. Camera movement in the y-axis.</figcaption>
+</figure><br/><br/>
 
-[INSERT CODE AT THIS POINT]
+<figure>
+<img src="https://i.imgur.com/V36riev.gif">
+<figcaption>Figure 50. Camera movement in the z-axis.</figcaption>
+</figure><br/><br/>
+
+<figure>
+<img src="https://i.imgur.com/vcQdghg.gif">
+<figcaption>Figure 51. Camera rotation; pitch and yaw.</figcaption>
+</figure><br/><br/>
+
+The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/266ff1055a740664caad671735f7c737976878ab/RayTracing/src).
