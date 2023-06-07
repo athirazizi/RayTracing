@@ -1040,48 +1040,38 @@ Currently there is no concept of aspect ratio in the code. We are still in the $
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/36b8991d39a194ca2fcd1f221e37f8f6a283bfa5/RayTracing/src).
 
-# Section 4: Ray casting and sphere intersection
+# 04 Ray Casting and Sphere Intersection
 
-## Section 4.1: Using floats for colours
+## 4.1 Using Floats for Representing Colours
 
-Let us repurpose the `PerPixel` function to output a `glm::vec4` data type:
+In this section, we can experiment with the 3D coordinate system by assigning each coordinate a colour. We can repurpose the `PerPixel()` function to output a `glm::vec4` data type:
+
 ```cpp
 glm::vec4 Renderer::PerPixel(glm::vec2 coord)
 
 if (discriminant >= 0.0f)
 {
-	return glm::vec4(0, 1, 0, 1); // this makes green (R, G, B, A)
+	return glm::vec4(0, 1, 0, 1); // this returns green (R, G, B, A)
 }
 
 return glm::vec4(0, 0, 0, 1); // this returns black
 ```
 
-This makes the code more readable as we are consistently using the RGBA format.
+This way, the colours are represented within the $0$ to $1$ range. Note that the current coordinate system is within the $-1$ to $1$ range and we will have to refactor the range later.
 
-Now, we have to convert our `PerPixel` function to the RGBA format:
-![image](https://user-images.githubusercontent.com/108275763/233859470-6f7a9e26-360f-4788-b68f-9c498749c625.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/233859470-6f7a9e26-360f-4788-b68f-9c498749c625.png">
+<figcaption>Figure 35. Recall that the PerPixel function returns a vec4 value.<figcaption>
+</figure><br/><br/>
 
-![image](https://user-images.githubusercontent.com/108275763/233859557-81520c49-4740-49e9-86f6-d6849e6a9819.png)
+Now, we have to convert our `PerPixel()` function to the RGBA format:
 
-We will have to make a function to convert the colour to the RGBA format.
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/233859557-81520c49-4740-49e9-86f6-d6849e6a9819.png">
+<figcaption>Figure 36. A function to convert to RGBA format.<figcaption>
+</figure><br/><br/>
 
-In a separate namespace the function is defined: 
-
-```cpp
-namespace Utils {
-	static uint32_t ConvertToRGBA(const glm::vec4& color)
-	{
-		color.r * 255.0f;
-	}
-}
-```
-
-Note that the color in each channel should be within the range of 0 to 1 to prevent 'spilling' out into other channels. Vulkan, DirectX, and OpenGL already does this for us, but since we have no graphics pipeline or GPU drivers, we have to code it ourselves.
-
-```cpp
-// clamp the range to 0 and 1
-color = glm::clamp(color, glm::vec4(0.0f), glm::vec4(1.0f));
-```
+We will have to make a function to convert the colour to RGBA format. We can define the function in a separate namespace:
 
 ```cpp
 namespace Utils {
@@ -1098,15 +1088,25 @@ namespace Utils {
 }
 ```
 
-![image](https://user-images.githubusercontent.com/108275763/233860146-a91f35e3-cfa5-4ceb-a3da-39bbfc751681.png)
+The ABGR format can be represented in a `uint32_t` value as seen above. The relevant channels are shifted to their appropriate bit ranges.
 
-## Section 4.2: Calculating sphere hit coordinates
+Note that the color in each channel should be within the range of $0$ to $1$ to prevent 'spilling' out into other channels. 
+
+
+Graphics APIs like Vulkan, DirectX, and OpenGL [already clamps colour values](https://gamedev.stackexchange.com/a/132536), but since we currently have no graphics pipeline or GPU drivers, we have to code it ourselves.
+
+```cpp
+// clamp the range to 0 and 1
+color = glm::clamp(color, glm::vec4(0.0f), glm::vec4(1.0f));
+```
+
+## 4.2 Calculating Sphere Hit Coordinates
 
 Next, we want to implement the second half of the quadratic formula:
 
 $$\frac{-b\pm\sqrt{discriminant}}{2a}$$
 
-Let us rework the `PerPixel` function to return black if the discriminant is less than zero, else, continue to capture the sphere:
+Let us rework the `PerPixel()` function to return black if the discriminant is less than zero, else, return a defined sphere colour:
 
 ```cpp
 if (discriminant < 0.0f)
@@ -1138,11 +1138,18 @@ glm::vec3 h0 = rayOrigin + rayDirection * t0;
 glm::vec3 h1 = rayOrigin + rayDirection * t1;
 ```
 
-## Section 4.3: Closest intersection point
+The `h0` and `h1` values represent the potential hit points that can happen when a ray intersects with a sphere.
+
+<figure>
+<img src="https://i.imgur.com/Upk9ilq.png">
+<figcaption>Figure 37. H0 is the hit upon entry; H1 is the hit upon leaving the sphere.<figcaption>
+</figure><br/><br/>
+
+## 4.3 Closest Intersection Point
 
 Recall that $t$ is the distance from the origin along the ray direction to our actual hit point. The smallest $t$ value would naturally be the closest intersection point. 
 
-In this case, `t1` would always be the lower value since we are subtracting $-b$ with the discriminant. Let's write this in code:
+In this case, `t1` would always be the lower value since we are subtracting $-b$ with the discriminant.
 
 ```cpp
 float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
@@ -1154,54 +1161,68 @@ sphereColor = hitPoint;
 return glm::vec4(sphereColor, 1.0f);
 ```
 
-The result is:
-![image](https://user-images.githubusercontent.com/108275763/233863574-1c20bce8-75a5-4f9e-8b94-4f880fc95d4e.png)
+## 4.4 Using colour to visualise numbers
 
-The sphere now has some colour which shows depth. 
-
-![image](https://user-images.githubusercontent.com/108275763/234369012-a3ed304f-5ab5-4f09-8118-5327ebc9e4c6.png)
-
-## Section 4.4: Using colour to visualise numbers
-
-In this case, $x$ and $y$ are negative set to $0$. $z$ is positive, and it is the blue colour that we are initialising. Recall that each hitpoint has an $x$, $y$, $z$ coordinate for every pixel. We are using those values and outputting them as a colour. Essentially:
+Recall that each hitpoint has an $x$, $y$, $z$ coordinate for every pixel. We are using those values and outputting them as a colour.
 
 $$x=r$$
 
-$$y=b$$
+$$y=r$$
 
-$$z=g$$
+$$z=b$$
 
-Where each plane represents a colour channel.
+Each plane represents a colour channel.
 
-## Section 4.4: How lighting and shading works
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/233863574-1c20bce8-75a5-4f9e-8b94-4f880fc95d4e.png">
+<figcaption>Figure 38. Visualising coordinates as colours.<figcaption>
+</figure><br/><br/>
+
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/234369012-a3ed304f-5ab5-4f09-8118-5327ebc9e4c6.png">
+<figcaption>Figure 39. The x-axis representing red, y-axis representing green, and z-axis representing blue.<figcaption>
+</figure><br/><br/>
+
+## 4.4 Lighting and Shading
+
+Relevant sources:
+
+- [PBRT - 12 Light Sources](https://www.pbr-book.org/3ed-2018/Light_Sources)
+
+PBRT covers various light sources such as point lights, distant lights, area lights, and infinite area lights. For now we will be implementing the simplest light source which is a point light.
 
 The easiest way to explain lighting and shading is by example:
 
-If the object is facing the light, its appearance is brighter.
-![image](https://user-images.githubusercontent.com/108275763/233867103-0783a83a-b8af-43f4-83e9-131c1aa9465d.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/233867103-0783a83a-b8af-43f4-83e9-131c1aa9465d.png">
+<figcaption>Figure 40. If the object is facing the light, its appearance is brighter.<figcaption>
+</figure><br/><br/>
 
-If the object is not facing the light, its appearance is dimmer.
-![image](https://user-images.githubusercontent.com/108275763/233867108-bf6b3c18-5649-422a-890d-d90ef1511eb2.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/233867108-bf6b3c18-5649-422a-890d-d90ef1511eb2.png">
+<figcaption>Figure 41. If the object is not facing the light, its appearance is dimmer.<figcaption>
+</figure><br/><br/>
 
-Light has different components such as intensity, colour, direction and a source. The final result of a scene with an object is dictated by the object's surface facing this light. The direction that each pixel faces towards the light has to be captured such that lighting can be rendered accordingly (surfaces facing the light appear brighter, else it is dimmer). 
+This real-life observation can be implemented in our program. The idea is that we want to determine the direction that each pixel (of a surface) is facing. As mentioned earlier, if this pixel is facing towards a directional light source, also known as a [point light](https://www.pbr-book.org/3ed-2018/Light_Sources/Point_Lights), it will be rendered brighter compared to those pixels which are not facing towards the light.
 
-## Section 4.5: Calculating lighting using normal vectors
+## 4.5 Calculating Lighting using Normal Vectors
 
-In this section, we want to determine, for each pixel, which direction it is facing. In other words, this is we want to calculate the normal (a vector perpendicular to the surface):
+In this section, we want to determine, for each pixel, which direction it is facing. In other words, we want to calculate the normal (a vector perpendicular to the surface) of each pixel:
 
-![image](https://user-images.githubusercontent.com/108275763/234367075-26d50a3e-a99d-4aef-af50-bd34b19b1cc2.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/234367075-26d50a3e-a99d-4aef-af50-bd34b19b1cc2.png">
+<figcaption>Figure 42. Example of a surface normal.<figcaption>
+</figure><br/><br/>
 
-![image](https://user-images.githubusercontent.com/108275763/234367339-ec807699-1af5-4e14-a6ef-895639b16a55.png)
+Since we already know the position of the sphere's origin and the position of the hitpoints, we can subtract these two vectors. 
 
-We already know the position of the sphere's origin and the position of the hitpoints, we can subtract these two vectors. 
-
-Since our current sphere origin is $(0,0,0)$, we know that the hitpoint is the normal. We have to normalise this vector because the radius of the sphere affects the magnitude of the vector. Recall the size of the radius:
+We know that the normal is the same as the hitpoint because the current sphere origin is $(0,0,0)$. However, we have to normalise this vector because the radius of the sphere affects the magnitude of the vector. Recall the size of the radius:
 
 ```cpp
 float radius = 0.5f;
 ```
 
-Consequently, the colours of the previously rendered sphere appears dark because the range is actually from 0 to 0.5. To find the normal we can use `glm::normalize`:
+Consequently, the colours of the previously rendered sphere appears darker than expected because the colour range is actually from $0$ to $0.5$ and not $0$ to $1$. To find the normal we can use `glm::normalize`:
 
 ```cpp
 glm::vec3 normal = glm::normalize(hitPoint);
@@ -1209,7 +1230,7 @@ glm::vec3 normal = glm::normalize(hitPoint);
 
 Usually, we would subtract the sphere origin from the hitpoint. We will do this in a future section.
 
-Let us visualise the normal:
+We can visualise the normal by assigning it to the sphere colour:
 
 ```cpp
 glm::vec3 sphereColor(1, 0, 1);
@@ -1219,17 +1240,16 @@ return glm::vec4(sphereColor, 1.0f);
 
 The result is:
 
-![image](https://user-images.githubusercontent.com/108275763/234369929-605b22aa-1a42-4855-8a43-19831884cb68.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/234369929-605b22aa-1a42-4855-8a43-19831884cb68.png">
+<figcaption>Figure 43. Visualising normals on the sphere colour.</figcaption>
+</figure><br/><br/>
 
-After moving the camera one unit forward (towards the sphere):
+We are sending the rays towards the $-z$ direction. Therefore, the normal is facing towards the $+z$ direction, which makes the blue colour much more saturated.
 
-![image](https://user-images.githubusercontent.com/108275763/234370401-be18cd79-57ae-4aba-b858-7b4084343a3e.png)
+## 4.6 Fixing Normal Visualisations
 
-We are sending the rays towards the $-z$ direction. Therefore, the normal is facing towards the $+z$ direction, which makes the colour blue much more potent.
-
-## Section 4.6: Fixing normal visualisations
-
-However, the normal vector can have valid values from $-1$ to $1$ for each component. We cannot see values which are less than $0$ in this case, resulting in less red and less green. 
+The normal vector can have valid values from $-1$ to $1$ for each component. We cannot see values which are less than $0$ in this case, resulting in less saturation for red and green colours. 
 
 We can shift the values like so: 
 
@@ -1245,21 +1265,24 @@ sphereColor = normal * 0.5f + 0.5f;
 
 The result is:
 
-![image](https://user-images.githubusercontent.com/108275763/234373539-071a830e-c28d-4d89-97f9-43ba2558b092.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/234373539-071a830e-c28d-4d89-97f9-43ba2558b092.png">
+<figcaption>Figure 44. Visualising a full range of colours on a sphere.</figcaption>
+</figure><br/><br/>
 
-We now get the full spectrum of colours.
+## 4.7 Calculating Lighting and Shading on a Sphere
 
-## Section 4.7: Calculating light and shade on a sphere
+For now we can set a simple point light to face the $-z$ direction and $-y$ direction. We also need to calculate the ingoing and outgoing vectors. 
 
-We need to set the light source to face the $-z$ direction and $-y$ direction. We also need to calculate the ingoing and outgoing vectors. This is the light direction:
+This is the light direction:
 
 ```cpp
 glm::vec3 lightDir = glm::normalize(glm::vec3(-1,-1,-1));
 ```
 
-Recall that we are trying to capture the direction of the normal vs the direction of the light. The angle of between these two vectors will show how much light is shared between them.
+Recall that we are trying to determine the direction of the normal vs the direction of the light. The angle between these two vectors will show exactly how much light is shared between them.
 
-Note that the vectors are in opposite directions. We can negate the light direction to calculate the angle between the two vectors by using a vector dot product:
+Note that the vectors are facing in opposite directions. We can negate the light direction to calculate the angle between the two vectors by using a vector dot product:
 
 $$a\cdot b = \cos(\theta)$$
 
@@ -1269,146 +1292,28 @@ In code, it looks like this:
 float d = glm::dot(normal, -lightDir);
 ```
 
-Because it is within the cosine function, it returns a value between $-1$ and $1$ and it indicates how much the normal is facing towards the light source. 
+The normal and the light direction have already been normalised, so they are unit vectors. As such, the above code is equivalent to the cosine of the angle. This returns a value between $-1$ and $1$ since it has the range of cosine, and it indicates how much the normal is facing towards the light source. 
 
-For example, if the dot product returns $0$, then the cosine of the angle was 0. The cosine of 90 is also 0. This means that the angle between the normal and the light direction in this case is 90 degrees. 
+For example, if the dot product returns $0$, then the cosine of the angle was $0$. The cosine of $90$ is also $0$. This means that the angle between the normal and the light direction in this case was $90\degree$. 
 
 At this point we also know that any angles above 90 will return a negative value, hence, a brighter colour.
 
-Now, we can multiply the sphere colour by the dot product, and this is what we get:
+Now, we can assign the sphere colour by multiplying itself with the dot product, and this is what we get:
 
 ```cpp
 sphereColor *= d;
 ```
 
-![image](https://user-images.githubusercontent.com/108275763/234424595-38608de4-a833-4bc3-a2a3-aadf2dfed868.png)
+<figure>
+<img src="https://user-images.githubusercontent.com/108275763/234424595-38608de4-a833-4bc3-a2a3-aadf2dfed868.png">
+<figcaption>Figure 45. A render of a sphere with shading based on a simple light source.</figcaption>
+</figure><br/><br/>
 
-We have successfully applied shading to the object.
+The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/747be4c357e9c5ba474d4a160df675c9a5ff9a05/RayTracing/src).
 
-At this point, the `Renderer.cpp` file should look like this:
+# 05 Implementing a User Interactive 3D Camera System
 
-<details>
-<summary>Click here to view code</summary>
-
-`Renderer.cpp`
-```cpp
-#include "Renderer.h"
-
-#include "Walnut/Random.h"
-
-namespace Utils {
-	static uint32_t ConvertToRGBA(const glm::vec4& color)
-	{
-		uint8_t r = color.r * 255.0f;
-		uint8_t g = color.g * 255.0f;
-		uint8_t b = color.b * 255.0f;
-		uint8_t a = color.a * 255.0f;
-
-		uint32_t result = (a << 24) | (b << 16) | (g << 8) | r;
-		return result;
-	}
-}
-
-void Renderer::OnResize(uint32_t width, uint32_t height)
-{
-	if (m_FinalImage)
-	{
-		// No resize necessary
-		if (m_FinalImage->GetWidth() == width && m_FinalImage->GetHeight() == height)
-			return;
-
-		m_FinalImage->Resize(width, height);
-	}
-	else
-	{
-		m_FinalImage = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
-	}
-
-	delete[] m_ImageData;
-	m_ImageData = new uint32_t[width * height];
-}
-
-void Renderer::Render()
-{
-	for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
-	{
-		for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
-		{
-			// assign a coordinate
-			glm::vec2 coord = { (float)x / (float)m_FinalImage->GetWidth(), (float)y / (float)m_FinalImage->GetHeight() };
-			// remap to -1 -> 1
-			coord = coord * 2.0f - 1.0f; 
-
-			// set the pixel colour to each pixel
-			glm::vec4 color = PerPixel(coord);
-			// clamp the range to 0 and 1
-			color = glm::clamp(color, glm::vec4(0.0f), glm::vec4(1.0f));
-
-			m_ImageData[x + y * m_FinalImage->GetWidth()] = Utils::ConvertToRGBA(color);
-		}
-	}
-
-	m_FinalImage->SetData(m_ImageData);
-}
-
-glm::vec4 Renderer::PerPixel(glm::vec2 coord)
-{
-	glm::vec3 rayOrigin(0.0f, 0.0f, 1.0f);
-	glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
-	float radius = 0.5f;
-	// rayDirection = glm::normalize(rayDirection);
-
-	// (bx^2 + by^2)t^2 + (2(axbx + ayby))t + (ax^2 + ay^2 - r^2) = 0
-	// where
-	// a = ray origin
-	// b = ray direction
-	// r = radius
-	// t = hit distance
-
-	// float a = rayDirection.x * rayDirection.x + rayDirection.y * rayDirection.y + rayDirection.z * rayDirection.z;
-	float a = glm::dot(rayDirection, rayDirection);
-	float b = 2.0f * glm::dot(rayOrigin, rayDirection);
-	float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
-
-	// quadratic formula discriminant
-	// b^2 - 4ac
-
-	float discriminant = b * b - 4.0f * a * c;
-	if (discriminant < 0.0f)
-	{
-		return glm::vec4(0, 0, 0, 1); // return black
-	}
-
-	// (-b +- sqrt(discriminant)) / 2a
-	// 
-	// > 0, 2 solutions
-	// = 0, 1 solution
-	// < 0, 0 solutions
-
-	// plus variant
-	float t0 = (-b + glm::sqrt(discriminant)) / (2.0f * a);
-	// minus variant
-	float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
-
-	glm::vec3 hitPoint = rayOrigin + rayDirection * closestT;
-	glm::vec3 normal = glm::normalize(hitPoint);
-
-	glm::vec3 lightDir = glm::normalize(glm::vec3(-1,-1,-1));
-	
-	// dot(normal, -lightDir) == cos(angle)
-	float d = glm::max(glm::dot(normal, -lightDir), 0.0f);
-
-	glm::vec3 sphereColor(0, 1, 0);
-	sphereColor *= d;
-	return glm::vec4(sphereColor, 1.0f);	
-}
-
-```
-</details>
-
-# Section 5: Implementing a user interactive 3D camera system
-
-## Section 5.1: How 3D cameras work
+## 5.1 How 3D Cameras Work
 
 Functionality wise, the user will have access to moving the position of the camera using the `W,A,S,D` keys on the keyboard, and moving where the camera faces using the mouse.
 
@@ -1423,7 +1328,7 @@ glm::vec3 rayDirection(coord.x, coord.y, -1.0f);
 
 Currently, there is no way to rotate the camera or to adjust the field of view due to the static implementation of the origin and direction. 
 
-## Section 5.2: The Camera class overview
+## 5.2 The Camera Class Overview
 
 The latest version of walnut contains a `Camera` class. This can be seen here:
 
@@ -1763,7 +1668,7 @@ void Camera::RecalculateProjection() {
 }
 ```
 
-## Section 5.3: Calculating and caching per-pixel ray directions
+## 5.3 Calculating and Caching Per-Pixel Ray Directions
 
 The camera has an attribute `m_RayDirections`: 
 
@@ -1810,7 +1715,7 @@ The `rayDirection` multiplies the inverse view matrix by the normalised target w
 
 We then cache the ray directions, as the normalisation operation and the matrix multiplication operations might slow the CPU down. SIMD performs these operations in fewer instructions, leading to faster execution [CITATION NEEDED]. Later on, this code will be refactored to be run on the GPU inside a shader (computer/raygen shader) where execution times will be fast.
 
-## Section 5.4: Using the camera class
+## 5.4 Using the Camera Class
 
 Recall that in `WalnutApp.cpp`, our functions are called the class `ExampleLayer`. 
 
