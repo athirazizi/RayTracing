@@ -1831,7 +1831,7 @@ ExampleLayer()
 }
 ```
 
-However, only the sphere with lowest `closestT` value will be rendered. We can run the ray-sphere intersection calculations in a [for loop for every sphere in the scene]().
+However, only the sphere with lowest `closestT` value will be rendered. We can run the ray-sphere intersection calculations in a [for loop for every sphere in the scene](https://github.com/athirazizi/RayTracing/blob/1d88255b3fc612ce7601ff42767314be4089edc2/RayTracing/src/Renderer.cpp#L85).
 
 We can also add controls for each sphere in the scene:
 ```cpp
@@ -1857,4 +1857,6 @@ The result is:
 <figcaption>Figure 55. A scene with two customisable spheres.</figcaption>
 </figure><br/><br/>
 
-The code at this point can be seen [here]().
+The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/1d88255b3fc612ce7601ff42767314be4089edc2/RayTracing/src).
+
+# 07 A Modern Ray Tracing Pipeline

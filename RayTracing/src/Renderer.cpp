@@ -133,7 +133,7 @@ glm::vec4 Renderer::TraceRay(const Scene& scene, const Ray& ray)
 	glm::vec3 normal = glm::normalize(hitPoint);
 
 	// you can change the light direction here
-	glm::vec3 lightDir = glm::normalize(glm::vec3(-1,-1,-1));
+	glm::vec3 lightDir = glm::normalize(glm::vec3(1,-1,-1));
 	
 	// dot(normal, -lightDir) == cos(angle)
 	float lightIntensity = glm::max(glm::dot(normal, -lightDir), 0.0f);
