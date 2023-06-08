@@ -1660,3 +1660,201 @@ Hit F5 and we can test the new inputs:
 </figure><br/><br/>
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/266ff1055a740664caad671735f7c737976878ab/RayTracing/src).
+
+# 06 Scene Description
+
+Relevant sources:
+
+- [PBRT - Scene Description Interface](https://www.pbr-book.org/3ed-2018/Scene_Description_Interface)
+- [RT in One Weekend - 9.5 A Scene with Metal Spheres](https://raytracing.github.io/books/RayTracingInOneWeekend.html#metal/ascenewithmetalspheres)
+
+## 6.1 The Scene Struct
+
+A scene description is a set of statements in program code which determines the positioning, geometry, materials, and lights in the scene which the user sees, and the effects that are used on objects in the environment.
+
+PBRT designs their scene description interface based on this descriptive approach, which is what we will be doing as well, mainly due to these reasons:
+
+- Users can specify properties of the scene at a high level
+- Users can modify the algorithms of the system to better suit their needs
+
+Our current scene description specifies a sphere at $(0,0,0)$, a camera at $(0,0,6)$, and a point light facing $(-1,-1,-1)$. We send our rays from the camera position and determine if they intersect with the sphere.
+
+The code at this point only specifies one sphere, but what if we wanted to render multiple spheres? We would have to re-run our ray-sphere intersection code - the `TraceRay()` function - for additional spheres.
+
+The `closestT` value is the distance from the surface of the sphere to the camera. We would have to compute this value for every sphere that is intersected in the scene.
+
+Assuming we want to have a scene with only spheres, we can define them in a header file like so:
+
+```cpp
+#pragma once
+
+#include <glm/glm.hpp>
+#include <vector>
+
+struct Sphere
+{
+	glm::vec3 Position{0.0f};
+	float Radius = 0.5f;
+
+	glm::vec3 Albedo{1.0f};
+};
+
+struct Scene 
+{
+	std::vector<Sphere> Spheres;
+};
+```
+
+The `Scene` is a struct containing `Spheres`. The sphere struct has a default position of $(0,0,0)$ and a default radius of $0.5$. Additionally, it has an [albedo](https://en.wikipedia.org/wiki/Albedo) component which is the diffuse reflected colour.
+
+## 6.2 Sphere Positioning in Scenes
+
+Recall the sphere equation:
+
+$$(x-a)^2 + (y-b)^2 + (z-c)^2 = r^2$$
+
+Where $x,y,z$ are coordinates of the sphere. Remember that our current sphere position is at the origin and so it is not taken into account when calculating $a,b,c$. As such we will have to refactor these calculations in `TraceRay()`.
+
+Another change we can make is separating the ray origin and the camera position. To visualise, that looks like this:
+
+<figure>
+<img src="https://i.imgur.com/MXYg3om.png">
+<figcaption>Figure 52. Separating the camera from the ray.</figcaption>
+</figure><br/><br/>
+
+We can define an `origin` which is the ray origin minus the sphere position:
+
+```cpp
+glm::vec3 origin = ray.Origin - glm::vec3(1.0f, 0.0f, 0.0f);
+```
+
+This is then used in the calculations for the hitpoint. The result is:
+
+<figure>
+<img src="https://i.imgur.com/GiN5Fe5.png">
+<figcaption>Figure 53. The sphere is translated 1 unit to the right.</figcaption>
+</figure><br/><br/>
+
+## 6.3 Renderer with a Scene Parameter
+
+We can refactor the `Render()` function to take a scene as an input:
+
+```cpp
+void Render(const Scene& scene, const Camera& camera);
+```
+
+The same thing can be done for the `TraceRay()` function:
+
+```cpp
+glm::vec4 TraceRay(const Scene& scene, const Ray& ray);
+```
+
+An example of a sphere in a scene is seen below:
+
+```cpp
+// define a sphere
+const Sphere& sphere = scene.Spheres[0];
+```
+
+We can then change the relevant statements using the sphere's components:
+
+```cpp
+glm::vec3 origin = ray.Origin - sphere.Position;
+float c = glm::dot(origin, origin) - sphere.Radius * sphere.Radius;
+glm::vec3 sphereColor = sphere.Albedo;
+```
+
+In `WalnutApp.cpp`, we can include a scene as a private member and pass it into the renderer:
+
+```cpp
+
+void Render(){
+	m_Renderer.Render(m_Scene, m_Camera);
+}
+private:
+	Scene m_Scene;
+```
+
+In the `ExampleLayer()` constructor, we can define the spheres in the scene:
+
+```cpp
+ExampleLayer()
+	: m_Camera(45.0f, 0.1f, 100.0f)
+{
+	{
+		Sphere sphere;
+		sphere.Position = { 0.0f, 0.0f, 0.0f };
+		sphere.Radius = 1.0f;
+		sphere.Albedo = { 0.0f,1.0f,0.0f };
+		m_Scene.Spheres.push_back(sphere);
+	}
+}
+```
+
+We can make the ray tracing application more user interactable by adding ImGui controls to change the properties of the sphere in real time, like so:
+
+```cpp
+ImGui::DragFloat3("Position", glm::value_ptr(m_Scene.Spheres[0].Position), 0.1f);
+ImGui::DragFloat("Radius", &m_Scene.Spheres[0].Radius, 0.1f);
+ImGui::ColorEdit3("Albedo", glm::value_ptr(m_Scene.Spheres[0].Albedo));
+```
+
+Here we are using [DragFloats](https://wiki.giderosmobile.com/index.php/ImGui.Core:dragFloat3) which are sliders that allow us to edit the position and radius. [ColorEdit3](https://wiki.giderosmobile.com/index.php/ImGui.Core:colorEdit3) allows us to edit the RGB values of the sphere albedo.
+
+<figure>
+<img src="https://i.imgur.com/PVugax9.png">
+<figcaption>Figure 54. Customisable sphere position, radius, and albedo in real time.</figcaption>
+</figure><br/><br/>
+
+## 6.4 Rendering multiple spheres
+
+As mentioned before, there is only sphere in the scene. We can add more spheres like so:
+
+```cpp
+ExampleLayer()
+	: m_Camera(45.0f, 0.1f, 100.0f)
+{
+	{
+		Sphere sphere;
+		sphere.Position = { 0.0f, 0.0f, 0.0f };
+		sphere.Radius = 1.0f;
+		sphere.Albedo = { 0.0f,1.0f,0.0f };
+		m_Scene.Spheres.push_back(sphere);
+	}
+	{
+		Sphere sphere;
+		sphere.Position = { -1.0f, 0.0f, -5.0f };
+		sphere.Radius = 1.0f;
+		sphere.Albedo = { 0.0f,1.0f,1.0f };
+		m_Scene.Spheres.push_back(sphere);
+	}
+}
+```
+
+However, only the sphere with lowest `closestT` value will be rendered. We can run the ray-sphere intersection calculations in a [for loop for every sphere in the scene]().
+
+We can also add controls for each sphere in the scene:
+```cpp
+for (size_t i = 0; i < m_Scene.Spheres.size(); i++)
+{
+	ImGui::PushID(i);
+	Sphere& sphere = m_Scene.Spheres[i];
+
+	ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f);
+	ImGui::DragFloat("Radius", &sphere.Radius, 0.1f);
+	ImGui::ColorEdit3("Albedo", glm::value_ptr(sphere.Albedo));
+
+	ImGui::Separator();
+
+	ImGui::PopID();
+}
+```
+
+The result is:
+
+<figure>
+<img src="https://i.imgur.com/3iaQlBi.png">
+<figcaption>Figure 55. A scene with two customisable spheres.</figcaption>
+</figure><br/><br/>
+
+The code at this point can be seen [here]().
