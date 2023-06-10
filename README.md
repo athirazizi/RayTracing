@@ -11,17 +11,19 @@ The project emphasises the use of modern practical based literature concerning r
 - [Ray Tracing in One Weekend](https://raytracing.github.io/)
 - [Physically Based Rendering: From Theory to Implementation](https://www.pbr-book.org/)
 
-We are applying ray tracing techniques from the former book series in real time scenarios, as opposed to a program which simply writes pixels to a file.
+We are applying ray tracing techniques from the former book series in real time scenarios, as opposed to a program which simply writes pixels to a file. The principles of the latter book, "physically based rendering" will be used in the implementation of various ray tracing concepts.
 
 Other resources:
 - C++
 - Windows 10
 - [Visual Studio 2022](https://visualstudio.microsoft.com/)
-- [Vulkan SDK](https://vulkan.lunarg.com/)
+- [Vulkan SDK](https://vulkan.lunarg.com/) (required)
 - [Desmos](https://www.desmos.com/calculator)
-- [Dear ImGui](https://github.com/ocornut/imgui)
 - [Shadertoy](https://www.shadertoy.com/)
 - [Scratchapixel](https://www.scratchapixel.com/)
+- [Dear ImGui](https://github.com/ocornut/imgui)
+- [TheCherno/WalnutAppTemplate](https://github.com/TheCherno/WalnutAppTemplate)
+- [TheCherno/RayTracing](https://github.com/TheCherno/RayTracing)
 
 # 01 Setting up the project
 
@@ -29,10 +31,10 @@ Other resources:
 
 [Walnut](https://github.com/TheCherno/WalnutAppTemplate) is an application development framework which will act as the base of the project.
 
-<figure>
-<img src="https://i.imgur.com/vvIsZ7j.png">
-<figcaption>Figure 1. The Walnut app template repo.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/vvIsZ7j.png" width="90%">
+	<br><sub>Figure 1. The Walnut app template repo.</sub>
+</div><br>
 
 By clicking `Use this template` on the GitHub page, we can create a [private repository](https://github.com/athirazizi/RayTracing/). 
 
@@ -48,32 +50,32 @@ git clone --recursive https://github.com/athirazizi/RayTracing/
 
 Once the repo has been cloned, run the `Setup.bat` script:
 
-<figure>
-<img src="https://i.imgur.com/93u0PCD.png">
-<figcaption>Figure 2. The Setup.bat script.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/93u0PCD.png" width="90%">
+	<br><sub>Figure 2. The Setup.bat script.</sub>
+</div><br>
 
 This will create a `.sln` file for the Walnup App. The code for this can be found [here](https://github.com/TheCherno/WalnutAppTemplate/blob/master/WalnutApp/src/WalnutApp.cpp).
 
 As with any new project, hit F5 and run the solution. This is what we are greeted with:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223400005-52ee0109-325f-4031-9c30-80f7d2b6e7b0.png">
-<figcaption>Figure 3. The default Walnut App inferface.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223400005-52ee0109-325f-4031-9c30-80f7d2b6e7b0.png" width="90%">
+	<br><sub>Figure 3. The default Walnut App inferface.</sub>
+</div><br>
 
 The UI elements are rendered using Vulkan. The menus can be resized and docked to the window.
 
-## 1.4 Rendering an Image 
+## 1.4 Rendering an Image
 
-We can declare an image of the data type `Image` from the `Walnut namespace`:
+We can declare an image of the data type `Image` from the `Walnut` namespace:
 
 ```cpp
 using namespace Walnut;
 
 private:
 	// this is the image
-	std::shared_ptr<Image>m_Image;
+	std::shared_ptr<Image>image_;
 ```
 
 Next, we want to modify the UI and create a button called Render which will call the `Render()` function to render the image.
@@ -91,9 +93,9 @@ The `Render()` function:
 void Render() 
 {
 	// create an image if there is no image
-	if (!m_Image) 
+	if (!image_) 
 	{
-		m_Image = std::make_shared<Image>();
+		image_ = std::make_shared<Image>();
 	}
 }
 ```
@@ -105,8 +107,8 @@ We need a width and height for the image. For now we will make another window ca
 ImGui::Begin("Viewport");
 
 // these are float values
-m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
-m_ViewportHeight = ImGui::GetContentRegionAvail().y;
+viewport_width_ = ImGui::GetContentRegionAvail().x;	
+viewport_height_ = ImGui::GetContentRegionAvail().y;
 
 ImGui::End();
 ```
@@ -115,7 +117,7 @@ The values returned by the `ImGui` functions are floats; we can store these valu
 
 ```cpp
 private:
-	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
+	uint32_t viewport_width_ = 0, viewport_height_ = 0;
 ```
 
 Now we can use the values to set the width and height of the image:
@@ -124,9 +126,9 @@ Now we can use the values to set the width and height of the image:
 void Render() 
 {
 	// create an image if there is no image
-	if (!m_Image) 
+	if (!image_) 
 	{
-		m_Image = std::make_shared<Image>(m_ViewportWidth, m_ViewportHeight);
+		image_ = std::make_shared<Image>(viewport_width_, viewport_height_);
 	}
 }
 ```
@@ -137,9 +139,9 @@ We would also have to recreate the image if we resize the window/viewport:
 void Render() 
 {
 	// create an image if there is no image or if the window has been resized
-	if (!m_Image || m_ViewportWidth != m_Image->GetWidth() || m_ViewportHeight != m_Image->GetHeight()) 
+	if (!image_ || viewport_width_ != image_->GetWidth() || viewport_height_ != image_->GetHeight()) 
 	{
-		m_Image = std::make_shared<Image>(m_ViewportWidth, m_ViewportHeight, ImageFormat::RGBA);
+		image_ = std::make_shared<Image>(viewport_width_, viewport_height_, ImageFormat::RGBA);
 	}
 }
 ```
@@ -151,7 +153,7 @@ We also have to create an image buffer for the pixel data:
 ```cpp
 private:
 	// buffer for image data
-	uint32_t* m_ImageData = nullptr;
+	uint32_t* image_data_ = nullptr;
 ```
 
 When we resize the viewport, we want to delete the old image data, then reallocate it. If the image data is null, then nothing will be deleted.
@@ -159,28 +161,28 @@ When we resize the viewport, we want to delete the old image data, then realloca
 ```cpp
 // create an image if there is no image
 // or if the viewport lengths are not the same as the image lengths
-if (!m_Image || m_ViewportWidth != m_Image->GetWidth() || m_ViewportHeight != m_Image->GetHeight()) 
+if (!image_ || viewport_width_ != image_->GetWidth() || viewport_height_ != image_->GetHeight()) 
 {
-	m_Image = std::make_shared<Image>(m_ViewportWidth, m_ViewportHeight, ImageFormat::RGBA);
+	image_ = std::make_shared<Image>(viewport_width_, viewport_height_, ImageFormat::RGBA);
 
 	// delete the old image data
-	delete[] m_ImageData;
+	delete[] image_data_;
 
 	// reallocate the image data
-	m_ImageData = new uint32_t[m_ViewportWidth * m_ViewportHeight];
+	image_data_ = new uint32_t[viewport_width_ * viewport_height_];
 }
 ```
 
 To render our first image, we can assign the image data buffer with some data, then send it to the GPU to render.
 
 ```cpp
-for (uint32_t i = 0; i < m_ViewportWidth * m_ViewportHeight; i++)
+for (uint32_t i = 0; i < viewport_width_ * viewport_height_; i++)
 {
-	m_ImageData[i] = 0xffff00ff;
+	image_data_[i] = 0xffff00ff;
 }
 
 // set data, which uploads to the GPU to render
-m_Image->SetData(m_ImageData);
+image_->SetData(image_data_);
 ```
 
 The image data is set in an ABGR format, which is the reverse of the RGBA format.:
@@ -192,19 +194,19 @@ ff|ff|00|ff
 We can then display the image:
 
 ```cpp
-if (m_Image)
+if (image_)
 {
 	// if there is an image, then display the image
-	ImGui::Image(m_Image->GetDescriptorSet(), { (float)m_Image->GetWidth(), (float)m_Image->GetHeight() });
+	ImGui::Image(image_->GetDescriptorSet(), { (float)image_->GetWidth(), (float)image_->GetHeight() });
 }
 ```
 
 Hit F5 and click render and this is what we get:
 
-<figure>
-<img src = "https://user-images.githubusercontent.com/108275763/223688212-4abdd8ae-7538-4866-94fe-4290d2d1a6af.png">
-<figcaption>Figure 4. The first image render.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223688212-4abdd8ae-7538-4866-94fe-4290d2d1a6af.png" width="90%">
+	<br><sub>Figure 4. The first image render.</sub>
+</div><br>
 
 To fill out the entire Viewport with the image, we can get rid of the window padding:
 
@@ -220,10 +222,10 @@ We can experiment further when returning a colour to render a pixel. For example
 ```cpp
 #include "Walnut/Random.h"
 
-for (uint32_t i = 0; i < m_ViewportWidth * m_ViewportHeight; i++)
+for (uint32_t i = 0; i < viewport_width_ * viewport_height_; i++)
 {
-	m_ImageData[i] = Random::UInt();
-	m_ImageData[i] |= 0xff000000;
+	image_data_[i] = Random::UInt();
+	image_data_[i] |= 0xff000000;
 }
 ```
 
@@ -231,10 +233,10 @@ First, we assign a random value to each channel in the ABGR format. We can retai
 
 Hit F5 and click render again and this is what the program returns:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223690636-5c304494-6497-45f7-bb15-4fae23ec7f7c.png">
-<figcaption>Figure 5. Returning random colours for each pixel in an image.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223690636-5c304494-6497-45f7-bb15-4fae23ec7f7c.png" width="90%">
+	<br><sub>Figure 5. Returning random colours for each pixel in an image.</sub>
+</div><br>
 
 Since the button calls the `Render()` function, it will output different pixel colours every time it is clicked.
 
@@ -249,63 +251,63 @@ void Render()
 
 	// create an image if there is no image
 	// or if the viewport lengths are not the same as the image lengths
-	if (!m_Image || m_ViewportWidth != m_Image->GetWidth() || m_ViewportHeight != m_Image->GetHeight()) 
+	if (!image_ || viewport_width_ != image_->GetWidth() || viewport_height_ != image_->GetHeight()) 
 	{
-		m_Image = std::make_shared<Image>(m_ViewportWidth, m_ViewportHeight, ImageFormat::RGBA);
+		image_ = std::make_shared<Image>(viewport_width_, viewport_height_, ImageFormat::RGBA);
 
 		// delete the old image data
-		delete[] m_ImageData;
+		delete[] image_data_;
 
 		// reallocate the image data
-		m_ImageData = new uint32_t[m_ViewportWidth * m_ViewportHeight];
+		image_data_ = new uint32_t[viewport_width_ * viewport_height_];
 	}
 
-	for (uint32_t i = 0; i < m_ViewportWidth * m_ViewportHeight; i++)
+	for (uint32_t i = 0; i < viewport_width_ * viewport_height_; i++)
 	{
-		m_ImageData[i] = Random::UInt();
-		m_ImageData[i] |= 0xff000000;
+		image_data_[i] = Random::UInt();
+		image_data_[i] |= 0xff000000;
 	}
 
 	// set data, which uploads to the GPU
-	m_Image->SetData(m_ImageData);
+	image_->SetData(image_data_);
 
-	m_LastRenderTime = timer.ElapsedMillis();
+	render_time_ = timer.ElapsedMillis();
 }
 ```
 
 Next we can display the time in the UI:
 
 ```cpp
-ImGui::Text("Last render: %.3fms", m_LastRenderTime);
+ImGui::Text("Last render: %.3fms", render_time_);
 ```
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223691524-385e279e-baaa-4b3a-aef2-7efdf8c21e18.png">
-<figcaption>Figure 6. Displaying the render time.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223691524-385e279e-baaa-4b3a-aef2-7efdf8c21e18.png">
+	<br><sub>Figure 6. Displaying the render time.</sub>
+</div><br>
 
 57 miliseconds to render a 720p image is not great. This is due to the project being configured as a debug build which has additional runtime checks which can slow render time. We configure the project using the Release build instead:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223691851-475ea2fc-6e67-40a4-a960-7f8130b308da.png">
-<figcaption>Figure 7. Configuring the project to Release build.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223691851-475ea2fc-6e67-40a4-a960-7f8130b308da.png">
+	<br><sub>Figure 7. Configuring the project to Release build.</sub>
+</div><br>
 
 Run the project again and this is what the program returns:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223691951-822beacc-de04-460b-811a-b584315cb6c5.png">
-<figcaption>Figure 8. Shorter render time using the release build.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223691951-822beacc-de04-460b-811a-b584315cb6c5.png">
+	<br><sub>Figure 8. Shorter render time using the release build.</sub>
+</div><br>
 
 ## 1.7 Realtime Rendering
 
 We can render a random image every frame by adding `Render()` into the end of `OnUIRender()`.
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223695777-e1fd89c9-bffa-4efe-a462-7c502fb904ee.gif">
-<figcaption>Figure 9. Returning random colours for each pixel on UI render.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223695777-e1fd89c9-bffa-4efe-a462-7c502fb904ee.gif" width="90%">
+	<br><sub>Figure 9. Returning random colours for each pixel on UI render.</sub>
+</div><br>
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/blob/35085b6828845eb0e34acbf00eea32b7d3e68ae5/RayTracing/src/WalnutApp.cpp).
 
@@ -332,10 +334,10 @@ We must first understand what a line is, since it is conceptually similar to a r
 
 On a cartesian plane with an $x$ and $y$ axis, the most basic line we can draw is $y=x$:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223700356-6b3489e8-ac70-4538-b245-ee83ae72841a.png">
-<figcaption>Figure 10. A straight line on a cartesian plane.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223700356-6b3489e8-ac70-4538-b245-ee83ae72841a.png" width="90%">
+	<br><sub>Figure 10. A straight line on a cartesian plane.</sub>
+</div><br>
 
 All lines follow the equation $y=mx+c$, where $m$ is the gradient and $c$ is the $y$ intercept.
 
@@ -348,10 +350,10 @@ In other words, this is a ray, expressed in terms of vectors.
 
 In 2D, the origin will have an $x$ and $y$ component and the direction will also have an $x$ and $y$ component:
 
-<figure>
-<img src="https://i.imgur.com/6lDkEjU.png">
-<figcaption>Figure 11. A vec2 component.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/6lDkEjU.png">
+	<br><sub>Figure 11. A ray with vec2 components.</sub>
+</div><br>
 
 In addition, we want to define a point along the line. In this case, we are using a $t$ parameter, which is the distance of the point along the line. It is also called a scalar since it scales along the vector.
 
@@ -369,17 +371,17 @@ $$P_{x,y} (2) = (4,4)$$
 
 The result is visualised below:
 
-<figure>
-<img src="https://i.imgur.com/kFrQsjE.png">
-<figcaption>Figure 12. Substituting t = 2.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/kFrQsjE.png">
+	<br><sub>Figure 12. Substituting t = 2.</sub>
+</div><br>
 
 If we enter a negative variable to $t$, we will go backwards from the origin:
 
-<figure>
-<img src="https://i.imgur.com/y9cIPgb.png">
-<figcaption>Figure 13. Negative and positive t parameters.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/y9cIPgb.png">
+	<br><sub>Figure 13. Negative and positive t parameters.</sub>
+</div><br>
 
 If the $x$ and $y$ values are not identical, we can split up the function by dimension/component:
 
@@ -407,10 +409,10 @@ Where $(a,	b)$ are the coordinates of the origin and $r$ is the radius.
 
 For example:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223714444-9c569d19-5bd6-4b5f-9625-32b5a160693a.png">
-<figcaption>Figure 14. A circle on a cartesian plane.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223714444-9c569d19-5bd6-4b5f-9625-32b5a160693a.png">
+	<br><sub>Figure 14. A circle on a cartesian plane.</sub>
+</div><br>
 
 This circle has the origin $(0,0)$ and a radius of $2$.
 
@@ -426,10 +428,10 @@ $$y=\sqrt{4-x^2}$$
 
 If we enter this equation into Desmos we would get:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223716951-3b43e862-30d9-48f8-81de-1e848f5d4d9c.png">
-<figcaption>Figure 15. Entering the positive square root into Desmos.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223716951-3b43e862-30d9-48f8-81de-1e848f5d4d9c.png" width="90%">
+	<br><sub>Figure 15. Entering the positive square root into Desmos.</sub>
+</div><br>
 
 We notice that only the first half of the circle is graphed.
 
@@ -451,10 +453,10 @@ Because of this, we need to input plus or minus to the result of the square root
 
 $$y=\pm\sqrt{4-x^2}$$
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223717043-35ec022c-daf3-4a13-af47-4ce940cd6f1f.png">
-<figcaption>Figure 16. Entering both positive and negative square roots.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223717043-35ec022c-daf3-4a13-af47-4ce940cd6f1f.png" width="90%">
+	<br><sub>Figure 16. Entering both positive and negative square roots.</sub>
+</div><br>
 
 Now, we can see both halves because we took into account both solutions.
 
@@ -462,10 +464,10 @@ Suppose that a ray has an origin $(-3,-3)$ that goes in the direction $(1,1)$. H
 
 On Desmos, we can visually see the solutions:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223718246-f25fae88-402c-4188-b675-22329abcd6ac.png">
-<figcaption>Figure 17. Points of ray-object intersection.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223718246-f25fae88-402c-4188-b675-22329abcd6ac.png" width="90%">
+	<br><sub>Figure 17. Points of ray-object intersection.</sub>
+</div><br>
 
 We need to formulate an equation to find these points of intersect in program code. 
 
@@ -473,24 +475,24 @@ We need to formulate an equation to find these points of intersect in program co
 
 We want to render an image similar to this:
 
-<figure>
-<img src="https://i.imgur.com/JP84mO9.png">
-<figcaption>Figure 18. A sphere in 3D space.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/JP84mO9.png">
+	<br><sub>Figure 18. A sphere in 3D space.</sub>
+</div><br>
 
 We want to add a directional light to show that the object in the image is a 3D sphere:
 
-<figure>
-<img src="https://i.imgur.com/D9Iaxmv.png">
-<figcaption>Figure 19. A sphere with a directional light in 3D space.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/D9Iaxmv.png">
+	<br><sub>Figure 19. A sphere with a directional light in 3D space.</sub>
+</div><br>
 
 The image can be looked at from a 2D perspective:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223722525-1b92b11c-37b2-42ca-8daa-33b42389c9f7.png">
-<figcaption>Figure 20. Sending rays from the camera onto a scene with a sphere.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223722525-1b92b11c-37b2-42ca-8daa-33b42389c9f7.png">
+	<br><sub>Figure 20. Sending rays from the camera onto a scene with a sphere.</sub>
+</div><br>
 
 We can see that we are sending rays from the camera and determining if the rays collide with the sphere.
 
@@ -594,10 +596,10 @@ $$-3 + 1(4.415) = (1.415,1.415)$$
 
 The answer matches the coordinates in Desmos:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/223718246-f25fae88-402c-4188-b675-22329abcd6ac.png">
-<figcaption>Figure 21. Coordinates from Desmos.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/223718246-f25fae88-402c-4188-b675-22329abcd6ac.png" width="90%">
+	<br><sub>Figure 21. Coordinates from Desmos.</sub>
+</div><br>
 
 Note that there is a rounding error because we approximated $\sqrt{32}$ as $5.66$.
 
@@ -658,7 +660,7 @@ public:
 	Renderer() = default;
 	void Render(); // renders every pixel 
 private:
-	std::shared_ptr<Walnut::Image>m_Image;
+	std::shared_ptr<Walnut::Image>image_;
 };
 ```
 
@@ -675,7 +677,7 @@ The Walnut library has a function `Resize()`:
 ```cpp
 void Image::Resize(uint32_t width, uint32_t height)
 {
-	if (m_Image && m_Width == width && m_Height == height)
+	if (image_ && m_Width == width && m_Height == height)
 		return;
 	// TODO: max size?
 	m_Width = width;
@@ -692,7 +694,7 @@ In the `Render()` function, we want to call `Resize()` before we render the imag
 We also had a CPU side buffer for the image data which we need to put in the class:
 
 ```cpp
-uint32_t* m_ImageData = nullptr;
+uint32_t* image_data_ = nullptr;
 ```
 
 We will make another function `GetFinalImage()` which returns the final image.
@@ -707,10 +709,10 @@ When triangles are rasterised, every pixel that gets generated as a result of th
 
 An example of a pixel shader can be seen in [Shadertoy](https://www.shadertoy.com/new):
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/224481367-ef20e588-9f3f-41c0-9a40-3addcf1dafbb.gif">
-<figcaption>Figure 22. Shadertoy.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/224481367-ef20e588-9f3f-41c0-9a40-3addcf1dafbb.gif" width="90%">
+	<br><sub>Figure 22. Shadertoy.</sub>
+</div><br>
 
 Here, you can write a pixel shader and it will be rendered in real time. 
 
@@ -740,10 +742,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 }
 ```
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/224481534-179de138-258e-4dbd-af2b-a3329125cac6.png">
-<figcaption>Figure 23. Simplified pixel shader in Shadertoy.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/224481534-179de138-258e-4dbd-af2b-a3329125cac6.png" width="90%">
+	<br><sub>Figure 23. Simplified pixel shader in Shadertoy.</sub>
+</div><br>
 
 The $x$ axis is confined to a value between $0$ and $1$ and it is displayed as the red channel, and the $y$ axis acts similarly but it instead displays the green channel.
 
@@ -768,14 +770,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 We can modify the `Render()` to contain two for loops, for $x$ and $y$ coordinates:
 
 ```cpp
-for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
+for (uint32_t y = 0; y < final_image_->GetHeight(); y++)
 {
-	for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
+	for (uint32_t x = 0; x < final_image_->GetWidth(); x++)
 	{
 		PerPixel();
 
-		m_ImageData[i] = Walnut::Random::UInt();
-		m_ImageData[i] |= 0xff000000;
+		image_data_[i] = Walnut::Random::UInt();
+		image_data_[i] |= 0xff000000;
 	}
 }
 ```
@@ -787,7 +789,7 @@ The reason we iterate the $y$ axis in the outer loop is because we want to be mo
 We can determine the coordinate in the nested for loop:
 
 ```cpp
-glm::vec2 coord = { (float)x / (float)m_FinalImage->GetWidth(), (float)y / (float)m_FinalImage->GetHeight() };
+glm::vec2 coord = { (float)x / (float)final_image_->GetWidth(), (float)y / (float)final_image_->GetHeight() };
 ```
 
 The coordinate is `x` divided by the total width of the image, and `y` divided by the total height.
@@ -797,7 +799,7 @@ We have to typecast the variables as float to perform float division, if not it 
 We can then set each pixel colour using the `PerPixel()` function at the appropriate coordinate:
 
 ```cpp
-m_ImageData[x + y * m_FinalImage->GetWidth()] = PerPixel(coord);
+image_data_[x + y * final_image_->GetWidth()] = PerPixel(coord);
 ```
 
 We are multiplying the $y$ coordinate by how large each row supposedly is.
@@ -811,10 +813,10 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 }
 ```
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/226174453-5257bcf3-7e46-4e28-8c9a-57b75145260b.png">
-<figcaption>Figure 24. Using the PerPixel function to return a single colour.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/226174453-5257bcf3-7e46-4e28-8c9a-57b75145260b.png" width="90%">
+	<br><sub>Figure 24. Using the PerPixel function to return a single colour.</sub>
+</div><br>
 
 We can recreate the Shadertoy pixel shader here:
 
@@ -830,17 +832,17 @@ uint32_t Renderer::PerPixel(glm::vec2 coord)
 
 Here we are setting the red channel to the `x` coordinate and green to the `y` coordinate.
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/226175125-1ed5b48c-8e7e-48f4-b08e-cccbbdbc4b7f.png">
-<figcaption>Figure 25. Recreating the Shadertoy pixel shader.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/226175125-1ed5b48c-8e7e-48f4-b08e-cccbbdbc4b7f.png" width="90%">
+	<br><sub>Figure 25. Recreating the Shadertoy pixel shader.</sub>
+</div><br>
 
 The image is flipped upside down because of how ImGui displays the image. We have to add another parameter to `ImGui::Image` (the `uv0` and `uv1` parameters) as seen below:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/226175271-b43e3223-d393-4378-a7a3-c05ccb4bbb71.png">
-<figcaption>Figure 26. ImGui Image parameters.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/226175271-b43e3223-d393-4378-a7a3-c05ccb4bbb71.png">
+	<br><sub>Figure 26. ImGui Image parameters.</sub>
+</div><br>
 
 ```cpp
 if (image)
@@ -853,17 +855,17 @@ if (image)
 
 We are reversing the `uv` coordinate of the $y$ axis. The `v` of the `uv` has now been inverted, and our image is now flipped right side up. Run the program again and this is what we get:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/226175456-26bb06b1-2ac1-4f42-9e5b-8a3fb8caf0f1.png">
-<figcaption>Figure 27. Corrected recreation of the pixel shader.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/226175456-26bb06b1-2ac1-4f42-9e5b-8a3fb8caf0f1.png" width="90%">
+	<br><sub>Figure 27. Corrected recreation of the pixel shader.</sub>
+</div><br>
 
 We can also test the `OnResize()` function here:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/226175514-0e13f6c4-0762-48a9-a195-b19c827e7855.gif">
-<figcaption>Figure 28. Testing the OnResize() function.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/226175514-0e13f6c4-0762-48a9-a195-b19c827e7855.gif" width="90%">
+	<br><sub>Figure 28. Testing the OnResize() function.</sub>
+</div><br>
 
 This coordinate system and the `PerPixel()` function is what we will be using to decide where to shoot our rays from and see if they intersect with the sphere.
 
@@ -898,10 +900,10 @@ Recall that $a$, $b$, and $c$ are coefficients of the quadratic equation.
 
 Suppose that we have a camera at $(0,0,0)$. To calculate a ray per pixel, we can use the input coordinate of the `PerPixel()` function. The current setup for the coordinate system is that it goes from $(0,0)$ to $(1,1)$. If we are using this as the direction, we would only shoot out our rays like so:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/226182672-99733608-fd60-4202-a526-64aa4656ff56.png">
-<figcaption>Figure 29. Current coordinate system.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/226182672-99733608-fd60-4202-a526-64aa4656ff56.png">
+	<br><sub>Figure 29. Current coordinate system.</sub>
+</div><br>
 
 We can remap the coordinates to go from $-1$ to $1$ rather than $0$ to $1$:
 
@@ -920,10 +922,10 @@ Currently, the coordinate is of data type `vec2`. However, our coordinate system
 
 Let us reimagine the scene again, except this time, the $y$ axis is flipped by $90\degree$:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/226183557-d6ad7dee-b986-4680-8aa5-c60687c82c8a.png">
-<figcaption>Figure 30. Flipping the scene by 90 degrees.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/226183557-d6ad7dee-b986-4680-8aa5-c60687c82c8a.png">
+	<br><sub>Figure 30. Flipping the scene by 90 degrees.</sub>
+</div><br>
 
 A 3D coordinate system will have depth to it, so we will add a `z` axis with a range of $-1$ to $1$.
 
@@ -998,19 +1000,19 @@ If we hit the sphere, we should see a green colour. Else, it returns black.
 
 Hit F5 and the program returns:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/226185270-8f7efaad-3e8a-470d-a39f-4c9cd54fe5b9.png">
-<figcaption>Figure 31. Running the ray-sphere intersection code for the first time.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/226185270-8f7efaad-3e8a-470d-a39f-4c9cd54fe5b9.png" width="90%">
+	<br><sub>Figure 31. Running the ray-sphere intersection code for the first time.</sub>
+</div><br>
 
 It seems that every pixel returns green, so this means that every pixel is a ray-sphere intersect.
 
 The ray origin is at $(0,0,0)$ and the sphere origin is also at $(0,0,0)$. This is visualised below:
 
-<figure>
-<img src="https://i.imgur.com/ixncpPM.png">
-<figcaption>Figure 32. What happens when the ray origin and sphere origin share the same coordinates.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/ixncpPM.png">
+	<br><sub>Figure 32. What happens when the ray origin and sphere origin share the same coordinates.</sub>
+</div><br>
 
 Essentially, the ray is inside the sphere and the sphere is filling up the viewport. 
 
@@ -1022,19 +1024,19 @@ glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
 
 Now the program returns:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/226185723-5938e105-856e-41b0-a92a-151e61d003b7.png">
-<figcaption>Figure 33. A render of a sphere.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/226185723-5938e105-856e-41b0-a92a-151e61d003b7.png" width="90%">
+	<br><sub>Figure 33. A render of a sphere.</sub>
+</div><br>
 
 Visually this looks like a circle, but it is actually a sphere in 3D space. It is hard to tell because of the flat lighting.
 
 Another problem is that when we resize the viewport, the circle gets stretched:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/226185950-d3c6ddb0-527d-4279-a41b-300f3bc3a08f.gif">
-<figcaption>Figure 34. Resizing the render of the sphere.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/226185950-d3c6ddb0-527d-4279-a41b-300f3bc3a08f.gif" width="90%">
+	<br><sub>Figure 34. Resizing the render of the sphere.</sub>
+</div><br>
 
 Currently there is no concept of aspect ratio in the code. We are still in the $-1$ to $1$ space, horizontally and vertically. We will fix this in the next section.
 
@@ -1059,17 +1061,17 @@ return glm::vec4(0, 0, 0, 1); // this returns black
 
 This way, the colours are represented within the $0$ to $1$ range. Note that the current coordinate system is within the $-1$ to $1$ range and we will have to refactor the range later.
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/233859470-6f7a9e26-360f-4788-b68f-9c498749c625.png">
-<figcaption>Figure 35. Recall that the PerPixel function returns a vec4 value.<figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/233859470-6f7a9e26-360f-4788-b68f-9c498749c625.png">
+	<br><sub>Figure 35. Recall that the PerPixel function returns a vec4 value.</sub>
+</div><br>
 
 Now, we have to convert our `PerPixel()` function to the RGBA format:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/233859557-81520c49-4740-49e9-86f6-d6849e6a9819.png">
-<figcaption>Figure 36. A function to convert to RGBA format.<figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/233859557-81520c49-4740-49e9-86f6-d6849e6a9819.png">
+	<br><sub>Figure 36. A function to convert to RGBA format.</sub>
+</div><br>
 
 We will have to make a function to convert the colour to RGBA format. We can define the function in a separate namespace:
 
@@ -1140,10 +1142,10 @@ glm::vec3 h1 = rayOrigin + rayDirection * t1;
 
 The `h0` and `h1` values represent the potential hit points that can happen when a ray intersects with a sphere.
 
-<figure>
-<img src="https://i.imgur.com/Upk9ilq.png">
-<figcaption>Figure 37. H0 is the hit upon entry; H1 is the hit upon leaving the sphere.<figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/Upk9ilq.png">
+	<br><sub>Figure 37. H0 is the hit upon entry; H1 is the hit upon leaving the sphere.</sub>
+</div><br>
 
 ## 4.3 Closest Intersection Point
 
@@ -1173,15 +1175,15 @@ $$z=b$$
 
 Each plane represents a colour channel.
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/233863574-1c20bce8-75a5-4f9e-8b94-4f880fc95d4e.png">
-<figcaption>Figure 38. Visualising coordinates as colours.<figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/233863574-1c20bce8-75a5-4f9e-8b94-4f880fc95d4e.png" width="90%">
+	<br><sub>Figure 38. Visualising coordinates as colours.</sub>
+</div><br>
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/234369012-a3ed304f-5ab5-4f09-8118-5327ebc9e4c6.png">
-<figcaption>Figure 39. The x-axis representing red, y-axis representing green, and z-axis representing blue.<figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/234369012-a3ed304f-5ab5-4f09-8118-5327ebc9e4c6.png">
+	<br><sub>Figure 39. The x-axis representing red, y-axis representing green, and z-axis representing blue.</sub>
+</div><br>
 
 ## 4.4 Lighting and Shading
 
@@ -1193,15 +1195,15 @@ PBRT covers various light sources such as point lights, distant lights, area lig
 
 The easiest way to explain lighting and shading is by example:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/233867103-0783a83a-b8af-43f4-83e9-131c1aa9465d.png">
-<figcaption>Figure 40. If the object is facing the light, its appearance is brighter.<figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/233867103-0783a83a-b8af-43f4-83e9-131c1aa9465d.png" width="90%">
+	<br><sub>Figure 40. If the object is facing the light, its appearance is brighter.</sub>
+</div><br>
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/233867108-bf6b3c18-5649-422a-890d-d90ef1511eb2.png">
-<figcaption>Figure 41. If the object is not facing the light, its appearance is dimmer.<figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/233867108-bf6b3c18-5649-422a-890d-d90ef1511eb2.png" width="90%">
+	<br><sub>Figure 41. If the object is not facing the light, its appearance is dimmer.</sub>
+</div><br>
 
 This real-life observation can be implemented in our program. The idea is that we want to determine the direction that each pixel (of a surface) is facing. As mentioned earlier, if this pixel is facing towards a directional light source, also known as a [point light](https://www.pbr-book.org/3ed-2018/Light_Sources/Point_Lights), it will be rendered brighter compared to those pixels which are not facing towards the light.
 
@@ -1209,10 +1211,10 @@ This real-life observation can be implemented in our program. The idea is that w
 
 In this section, we want to determine, for each pixel, which direction it is facing. In other words, we want to calculate the normal (a vector perpendicular to the surface) of each pixel:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/234367075-26d50a3e-a99d-4aef-af50-bd34b19b1cc2.png">
-<figcaption>Figure 42. Example of a surface normal.<figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/234367075-26d50a3e-a99d-4aef-af50-bd34b19b1cc2.png">
+	<br><sub>Figure 42. Example of a surface normal.</sub>
+</div><br>
 
 Since we already know the position of the sphere's origin and the position of the hitpoints, we can subtract these two vectors. 
 
@@ -1240,10 +1242,10 @@ return glm::vec4(sphereColor, 1.0f);
 
 The result is:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/234369929-605b22aa-1a42-4855-8a43-19831884cb68.png">
-<figcaption>Figure 43. Visualising normals on the sphere colour.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/234369929-605b22aa-1a42-4855-8a43-19831884cb68.png" width="90%">
+	<br><sub>Figure 43. Visualising normals on the sphere colour.</sub>
+</div><br>
 
 We are sending the rays towards the $-z$ direction. Therefore, the normal is facing towards the $+z$ direction, which makes the blue colour much more saturated.
 
@@ -1265,10 +1267,10 @@ sphereColor = normal * 0.5f + 0.5f;
 
 The result is:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/234373539-071a830e-c28d-4d89-97f9-43ba2558b092.png">
-<figcaption>Figure 44. Visualising a full range of colours on a sphere.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/234373539-071a830e-c28d-4d89-97f9-43ba2558b092.png" width="90%">
+	<br><sub>Figure 44. Visualising a full range of colours on a sphere.</sub>
+</div><br>
 
 ## 4.7 Calculating Lighting and Shading on a Sphere
 
@@ -1304,10 +1306,10 @@ Now, we can assign the sphere colour by multiplying itself with the dot product,
 sphereColor *= d;
 ```
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/234424595-38608de4-a833-4bc3-a2a3-aadf2dfed868.png">
-<figcaption>Figure 45. A render of a sphere with shading based on a simple light source.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/234424595-38608de4-a833-4bc3-a2a3-aadf2dfed868.png" width="90%">
+	<br><sub>Figure 45. A render of a sphere with shading based on a simple light source.</sub>
+</div><br>
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/747be4c357e9c5ba474d4a160df675c9a5ff9a05/RayTracing/src).
 
@@ -1332,8 +1334,8 @@ Essentially the rays are being sent out from the camera. Currently, there is no 
 
 The latest version of Walnut contains a `Camera` class. This can be seen here:
 
-- [Camera.h](https://github.com/athirazizi/RayTracing/blob/c2bde46b7204a39fb344536672e427fd92949631/RayTracing/src/Camera.h)
-- [Camera.cpp](https://github.com/athirazizi/RayTracing/blob/c2bde46b7204a39fb344536672e427fd92949631/RayTracing/src/Camera.cpp)
+- [Camera.h](https://github.com/athirazizi/RayTracing/blob/master/RayTracing/src/Camera.h)
+- [Camera.cpp](https://github.com/athirazizi/RayTracing/blob/master/RayTracing/src/Camera.cpp)
 
 This camera system is similar to [Unity](https://docs.unity3d.com/Manual/class-Camera.html)/[Unreal Engine](https://docs.unrealengine.com/4.26/en-US/InteractiveExperiences/UsingCameras/) which allows the user to hold right click to rotate the camera and use `W,A,S,D` to move within the environment. 
 
@@ -1345,10 +1347,10 @@ Camera(float verticalFOV, float nearClip, float farClip);
 
 These parameters are visualised in the figure below:
 
-<figure>
-<img src="https://user-images.githubusercontent.com/108275763/234670873-b9c32829-6350-48df-99c9-839e90317328.png">
-<figcaption>Figure 46. A viewing frustum. Adapted from <a href="https://en.wikipedia.org/wiki/Viewing_frustum#/media/File:ViewFrustum.svg">wikipedia</a>.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://user-images.githubusercontent.com/108275763/234670873-b9c32829-6350-48df-99c9-839e90317328.png" width="90%">
+	<br><sub>Figure 46. A viewing frustum. Adapted from <a href="https://en.wikipedia.org/wiki/Viewing_frustum#/media/File:ViewFrustum.svg">wikipedia</a>.</sub>
+</div><br>
 
 A viewing frustum represents the camera field of view in a 3D region. The near plane indicated in yellow is the `nearClip` and the far plane indicated in blue is the `farClip`. Anything outside of this frustum is not rendered in the final scene because they are out of sight.
 
@@ -1365,84 +1367,6 @@ float GetRotationSpeed();
 ```
 
 The function `OnUpdate()` is called every frame with the timestep (which allows the camera to move at constant speed, independent of the frame rate):
-
-```cpp
-bool Camera::OnUpdate(float ts) {
-	// Capture mouse input
-	glm::vec2 mousePos = Input::GetMousePosition();
-
-	// Calculate position moved with the mouse
-	glm::vec2 delta = (mousePos - m_LastMousePosition) * 0.002f;
-	m_LastMousePosition = mousePos;
-
-	// If right click is now held down, return
-	// Camera movement is only active when right click is held
-	if (!Input::IsMouseButtonDown(MouseButton::Right)) {
-		Input::SetCursorMode(CursorMode::Normal);
-		return false;
-	}
-
-	// Locks cursor to window and hides the cursor
-	Input::SetCursorMode(CursorMode::Locked);
-
-	// Used to check if ray directions and matrices need to be recalculated 
-	bool moved = false;
-
-	// Calculate the y direction of the camera
-	constexpr glm::vec3 upDirection(0.0f, 1.0f, 0.0f);
-
-	// Calculate the right direction, which is the cross product
-	// between the forward direction and the up direction
-	glm::vec3 rightDirection = glm::cross(m_ForwardDirection, upDirection);
-
-	float speed = 5.0f;
-
-	// Movement
-	if (Input::IsKeyDown(KeyCode::W)) {
-		m_Position += m_ForwardDirection * speed * ts;
-		moved = true;
-	} else if (Input::IsKeyDown(KeyCode::S)) {
-		m_Position -= m_ForwardDirection * speed * ts;
-		moved = true;
-	}
-	if (Input::IsKeyDown(KeyCode::A)) {
-		m_Position -= rightDirection * speed * ts;
-		moved = true;
-	} else if (Input::IsKeyDown(KeyCode::D)) {
-		m_Position += rightDirection * speed * ts;
-		moved = true;
-	}
-	if (Input::IsKeyDown(KeyCode::Q)) {
-		m_Position -= upDirection * speed * ts;
-		moved = true;
-	} else if (Input::IsKeyDown(KeyCode::E)) {
-		m_Position += upDirection * speed * ts;
-		moved = true;
-	}
-
-	// Rotation
-	if (delta.x != 0.0f || delta.y != 0.0f) {
-		
-		float pitchDelta = delta.y * GetRotationSpeed();
-		
-		float yawDelta = delta.x * GetRotationSpeed();
-
-		// Captures the delta in all axes
-		glm::quat q = glm::normalize(glm::cross(glm::angleAxis(-pitchDelta, rightDirection),
-			glm::angleAxis(-yawDelta, glm::vec3(0.f, 1.0f, 0.0f))));
-		m_ForwardDirection = glm::rotate(q, m_ForwardDirection);
-
-		moved = true;
-	}
-
-	if (moved) {
-		RecalculateView();
-		RecalculateRayDirections();
-	}
-
-	return moved;
-}
-```
 
 `OnUpdate()` captures the delta of the mouse position from the previous frame to the current frame. This value is updated constantly (using each timestep) to make the system feel more responsive. 
 
@@ -1474,11 +1398,11 @@ This function assigns a position, a vector to look at, and an a $y$-directional 
 The function `OnResize()` is used to recalculate the projection matrix:
 ```cpp
 void Camera::OnResize(uint32_t width, uint32_t height) {
-	if (width == m_ViewportWidth && height == m_ViewportHeight)
+	if (width == viewport_width_ && height == viewport_height_)
 		return;
 
-	m_ViewportWidth = width;
-	m_ViewportHeight = height;
+	viewport_width_ = width;
+	viewport_height_ = height;
 
 	RecalculateProjection();
 	RecalculateRayDirections();
@@ -1489,15 +1413,15 @@ void Camera::OnResize(uint32_t width, uint32_t height) {
 
 ```cpp
 void Camera::RecalculateProjection() {
-	m_Projection = glm::perspectiveFov(glm::radians(m_VerticalFOV), (float)m_ViewportWidth, (float)m_ViewportHeight, m_NearClip, m_FarClip);
+	m_Projection = glm::perspectiveFov(glm::radians(m_VerticalFOV), (float)viewport_width_, (float)viewport_height_, m_NearClip, m_FarClip);
 	m_InverseProjection = glm::inverse(m_Projection);
 }
 ```
 
-<figure>
-<img src="http://www.songho.ca/opengl/files/gl_projectionmatrix01.png">
-<figcaption>Figure 47. Perspective frustum. Adapted from <a href="http://www.songho.ca/opengl/gl_projectionmatrix.html#perspective">OpenGL</a>.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="http://www.songho.ca/opengl/files/gl_projectionmatrix01.png" width="90%">
+	<br><sub>Figure 47. Perspective frustum. Adapted from <a href="http://www.songho.ca/opengl/gl_projectionmatrix.html#perspective">OpenGL</a>.</sub>
+</div><br>
 
 ## 5.3 Calculating & Caching Per-Pixel Ray Directions
 
@@ -1511,16 +1435,16 @@ It is associated with the `RecalculateRayDirections()` function which some cache
 
 ```cpp
 void Camera::RecalculateRayDirections() {
-	m_RayDirections.resize(m_ViewportWidth * m_ViewportHeight);
+	m_RayDirections.resize(viewport_width_ * viewport_height_);
 
-	for (uint32_t y = 0; y < m_ViewportHeight; y++) {
-		for (uint32_t x = 0; x < m_ViewportWidth; x++) {
-			glm::vec2 coord = { (float)x / (float)m_ViewportWidth, (float)y / (float)m_ViewportHeight };
+	for (uint32_t y = 0; y < viewport_height_; y++) {
+		for (uint32_t x = 0; x < viewport_width_; x++) {
+			glm::vec2 coord = { (float)x / (float)viewport_width_, (float)y / (float)viewport_height_ };
 			coord = coord * 2.0f - 1.0f; // -1 -> 1
 
 			glm::vec4 target = m_InverseProjection * glm::vec4(coord.x, coord.y, 1, 1);
 			glm::vec3 rayDirection = glm::vec3(m_InverseView * glm::vec4(glm::normalize(glm::vec3(target) / target.w), 0)); // World space
-			m_RayDirections[x + y * m_ViewportWidth] = rayDirection;
+			m_RayDirections[x + y * viewport_width_] = rayDirection;
 		}
 	}
 }
@@ -1554,14 +1478,14 @@ In `WalnutApp.cpp`, our functions are called in the class `ExampleLayer`.
 
 We can declare a camera as a member inside the Layer: 
 ```cpp
-Camera m_Camera
+Camera camera_
 ```
 
 and then define it in the constructor with the FOV, near clip, and farclip:
 
 ```cpp
 ExampleLayer()
-	: m_Camera(45.0f, 0.1f, 100.0f){}
+	: camera_(45.0f, 0.1f, 100.0f){}
 ```
 
 We can override the function `OnUpdate()` in the `Layer` class. Here, we will update the camera:
@@ -1569,13 +1493,13 @@ We can override the function `OnUpdate()` in the `Layer` class. Here, we will up
 ```cpp
 virtual void OnUpdate(float ts) override
 {
-	m_Camera.OnUpdate(ts);
+	camera_.OnUpdate(ts);
 }
 ```
 
 We also want to pass in this camera into the renderer member:
 ```cpp
-m_Renderer.Render(m_Camera);
+renderer_.Render(camera_);
 ```
 
 and so we have to update the `Render()` function to take a camera as an input:
@@ -1593,11 +1517,11 @@ const glm::vec3& rayOrigin = camera.GetPosition();
 The ray direction is used for every pixel coordinate so it is called inside two loops for the rendered scene:
 
 ```cpp
-for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
+for (uint32_t y = 0; y < final_image_->GetHeight(); y++)
 {
-	for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
+	for (uint32_t x = 0; x < final_image_->GetWidth(); x++)
 	{
-		const glm::vec3& rayDirection = camera.GetRayDirections()[x + y * m_FinalImage->GetWidth()];
+		const glm::vec3& rayDirection = camera.GetRayDirections()[x + y * final_image_->GetWidth()];
 ```
 
 We have to refactor `PerPixel()` since we have removed the `coord` variable. Let use rename it to `TraceRay()` and take in a ray as a parameter. Recall that a ray has an origin and a direction. We will make a Ray header file which contains a data structure containing a ray:
@@ -1624,11 +1548,11 @@ void Renderer::Render(const Camera& camera)
 	Ray ray;
 	ray.Origin = camera.GetPosition();
 
-	for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
+	for (uint32_t y = 0; y < final_image_->GetHeight(); y++)
 	{
-		for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
+		for (uint32_t x = 0; x < final_image_->GetWidth(); x++)
 		{
-			ray.Direction = camera.GetRayDirections()[x + y * m_FinalImage->GetWidth()];
+			ray.Direction = camera.GetRayDirections()[x + y * final_image_->GetWidth()];
 			
 
 			// set the pixel colour to each pixel
@@ -1639,25 +1563,25 @@ void Renderer::Render(const Camera& camera)
 
 Hit F5 and we can test the new inputs:
 
-<figure>
-<img src="https://i.imgur.com/sAWGYQj.gif">
-<figcaption>Figure 48. Camera movement in the x-axis.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/sAWGYQj.gif" width="90%">
+	<br><sub>Figure 48. Camera movement in the x-axis.</sub>
+</div><br>
 
-<figure>
-<img src="https://i.imgur.com/sBn3JRt.gif">
-<figcaption>Figure 49. Camera movement in the y-axis.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/sBn3JRt.gif" width="90%">
+	<br><sub>Figure 49. Camera movement in the y-axis.</sub>
+</div><br>
 
-<figure>
-<img src="https://i.imgur.com/V36riev.gif">
-<figcaption>Figure 50. Camera movement in the z-axis.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/V36riev.gif" width="90%">
+	<br><sub>Figure 50. Camera movement in the z-axis.</sub>
+</div><br>
 
-<figure>
-<img src="https://i.imgur.com/vcQdghg.gif">
-<figcaption>Figure 51. Camera rotation; pitch and yaw.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/vcQdghg.gif" width="90%">
+	<br><sub>Figure 51. Camera rotation; pitch and yaw.</sub>
+</div><br>
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/266ff1055a740664caad671735f7c737976878ab/RayTracing/src).
 
@@ -1717,10 +1641,10 @@ Where $x,y,z$ are coordinates of the sphere. Remember that our current sphere po
 
 Another change we can make is separating the ray origin and the camera position. To visualise, that looks like this:
 
-<figure>
-<img src="https://i.imgur.com/MXYg3om.png">
-<figcaption>Figure 52. Separating the camera from the ray.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/MXYg3om.png">
+	<br><sub>Figure 52. Separating the camera from the ray.</sub>
+</div><br>
 
 We can define an `origin` which is the ray origin minus the sphere position:
 
@@ -1730,10 +1654,10 @@ glm::vec3 origin = ray.Origin - glm::vec3(1.0f, 0.0f, 0.0f);
 
 This is then used in the calculations for the hitpoint. The result is:
 
-<figure>
-<img src="https://i.imgur.com/GiN5Fe5.png">
-<figcaption>Figure 53. The sphere is translated 1 unit to the right.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/GiN5Fe5.png" width="90%">
+	<br><sub>Figure 53. The sphere is translated 1 unit to the right.</sub>
+</div><br>
 
 ## 6.3 Renderer with a Scene Parameter
 
@@ -1769,24 +1693,24 @@ In `WalnutApp.cpp`, we can include a scene as a private member and pass it into 
 ```cpp
 
 void Render(){
-	m_Renderer.Render(m_Scene, m_Camera);
+	renderer_.Render(scene_, camera_);
 }
 private:
-	Scene m_Scene;
+	Scene scene_;
 ```
 
 In the `ExampleLayer()` constructor, we can define the spheres in the scene:
 
 ```cpp
 ExampleLayer()
-	: m_Camera(45.0f, 0.1f, 100.0f)
+	: camera_(45.0f, 0.1f, 100.0f)
 {
 	{
 		Sphere sphere;
 		sphere.Position = { 0.0f, 0.0f, 0.0f };
 		sphere.Radius = 1.0f;
 		sphere.Albedo = { 0.0f,1.0f,0.0f };
-		m_Scene.Spheres.push_back(sphere);
+		scene_.Spheres.push_back(sphere);
 	}
 }
 ```
@@ -1794,17 +1718,17 @@ ExampleLayer()
 We can make the ray tracing application more user interactable by adding ImGui controls to change the properties of the sphere in real time, like so:
 
 ```cpp
-ImGui::DragFloat3("Position", glm::value_ptr(m_Scene.Spheres[0].Position), 0.1f);
-ImGui::DragFloat("Radius", &m_Scene.Spheres[0].Radius, 0.1f);
-ImGui::ColorEdit3("Albedo", glm::value_ptr(m_Scene.Spheres[0].Albedo));
+ImGui::DragFloat3("Position", glm::value_ptr(scene_.Spheres[0].Position), 0.1f);
+ImGui::DragFloat("Radius", &scene_.Spheres[0].Radius, 0.1f);
+ImGui::ColorEdit3("Albedo", glm::value_ptr(scene_.Spheres[0].Albedo));
 ```
 
 Here we are using [DragFloats](https://wiki.giderosmobile.com/index.php/ImGui.Core:dragFloat3) which are sliders that allow us to edit the position and radius. [ColorEdit3](https://wiki.giderosmobile.com/index.php/ImGui.Core:colorEdit3) allows us to edit the RGB values of the sphere albedo.
 
-<figure>
-<img src="https://i.imgur.com/PVugax9.png">
-<figcaption>Figure 54. Customisable sphere position, radius, and albedo in real time.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/PVugax9.png" width="90%">
+	<br><sub>Figure 54. Customisable sphere position, radius, and albedo in real time.</sub>
+</div><br>
 
 ## 6.4 Rendering multiple spheres
 
@@ -1812,21 +1736,21 @@ As mentioned before, there is only sphere in the scene. We can add more spheres 
 
 ```cpp
 ExampleLayer()
-	: m_Camera(45.0f, 0.1f, 100.0f)
+	: camera_(45.0f, 0.1f, 100.0f)
 {
 	{
 		Sphere sphere;
 		sphere.Position = { 0.0f, 0.0f, 0.0f };
 		sphere.Radius = 1.0f;
 		sphere.Albedo = { 0.0f,1.0f,0.0f };
-		m_Scene.Spheres.push_back(sphere);
+		scene_.Spheres.push_back(sphere);
 	}
 	{
 		Sphere sphere;
 		sphere.Position = { -1.0f, 0.0f, -5.0f };
 		sphere.Radius = 1.0f;
 		sphere.Albedo = { 0.0f,1.0f,1.0f };
-		m_Scene.Spheres.push_back(sphere);
+		scene_.Spheres.push_back(sphere);
 	}
 }
 ```
@@ -1835,10 +1759,10 @@ However, only the sphere with lowest `closestT` value will be rendered. We can r
 
 We can also add controls for each sphere in the scene:
 ```cpp
-for (size_t i = 0; i < m_Scene.Spheres.size(); i++)
+for (size_t i = 0; i < scene_.Spheres.size(); i++)
 {
 	ImGui::PushID(i);
-	Sphere& sphere = m_Scene.Spheres[i];
+	Sphere& sphere = scene_.Spheres[i];
 
 	ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f);
 	ImGui::DragFloat("Radius", &sphere.Radius, 0.1f);
@@ -1852,10 +1776,10 @@ for (size_t i = 0; i < m_Scene.Spheres.size(); i++)
 
 The result is:
 
-<figure>
-<img src="https://i.imgur.com/LTlVjfp.png">
-<figcaption>Figure 55. A scene with two customisable spheres.</figcaption>
-</figure><br/><br/>
+<div align="center">
+	<img src="https://i.imgur.com/LTlVjfp.png" width="90%">
+	<br><sub>Figure 55. A scene with two customisable spheres.</sub>
+</div><br>
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/1d88255b3fc612ce7601ff42767314be4089edc2/RayTracing/src).
 
@@ -1876,17 +1800,17 @@ In this section, we will be refactoring the program to use modern ray tracing pi
 4. **Closest hit shader** - invoked when a ray-object intersection occurs; returns the final colour and appearance of the intersected object, while considering its properties
 5. **Any-hit shader** - optional shader used for transparent/translucent textures 
 
-<figure>
-<img src="https://i.imgur.com/Dv0V4BE.png">
-<figcaption>Figure 56. The ray tracing pipeline. Adapted from <a href="https://arxiv.org/pdf/2006.11348.pdf">NVIDIA</a>.</figcaption>
-</figure><br><br>
+<div align="center">
+	<img src="https://i.imgur.com/Dv0V4BE.png" width="90%">
+	<br><sub>Figure 56. The ray tracing pipeline. Adapted from <a href="https://arxiv.org/pdf/2006.11348.pdf">NVIDIA</a>.</sub>
+</div><br>
 
 The current `Render()` function sends a ray for each pixel in the viewport and within the function, `TraceRay()` returns a colour for each ray that is traced. However, in modern ray tracing pipelines, typically more than one ray is casted for each pixel to decide its final colour.
 
-<figure>
-<img src="https://i.imgur.com/oUHS2ri.png">
-<figcaption>Figure 57. The ray tracing process. Adapted from <a href="https://www.youtube.com/watch?v=LoKUmbvbcRY">NVIDIA</a>.</figcaption>
-</figure><br><br>
+<div align="center">
+	<img src="https://i.imgur.com/oUHS2ri.png" width="90%">
+	<br><sub>Figure 57. The ray tracing process. Adapted from <a href="https://www.youtube.com/watch?v=LoKUmbvbcRY">NVIDIA</a>.</sub>
+</div><br>
 
 After sending out rays, they will traverse throughout the scene. Depending on the invoked shaders, such as the closest hit shader, the rays could recurse and additional rays are sent out and these would affect the final rendered colour of each pixel.
 
@@ -1929,17 +1853,17 @@ HitInfo ClosestHit(const Ray& ray, uint32_t object_index, float hit_distance);
 HitInfo Miss(const Ray& ray);
 ```
 
-The `RayGen()` implementation can be seen [here](). It generates rays for every pixel in the scene and invokes `TraceRay()` which sets the colour for each pixel. It also handles lighting/shading calculations.
+The `RayGen()` implementation can be seen [here](https://github.com/athirazizi/RayTracing/blob/37887afd320b09105da20d9d737fbd7c8cb97a5c/RayTracing/src/Renderer.cpp#L72). It generates rays for every pixel in the scene and invokes `TraceRay()` which sets the colour for each pixel. It also handles lighting/shading calculations.
 
-The `TraceRay()` implementation can be seen [here](). It is responsible for tracing each ray in the scene, and determines if ray-object intersection occurs. If it does, `ClosestHit()` is invoked, else `Miss()` is invoked.
+The `TraceRay()` implementation can be seen [here](https://github.com/athirazizi/RayTracing/blob/37887afd320b09105da20d9d737fbd7c8cb97a5c/RayTracing/src/Renderer.cpp#L123). It is responsible for tracing each ray in the scene, and determines if ray-object intersection occurs. If it does, `ClosestHit()` is invoked, else `Miss()` is invoked.
 
 ## 7.2 Closest-hit shader
 
-The `ClosestHit()` implementation can be seen [here](). This calculates the payload position and normal.
+The `ClosestHit()` implementation can be seen [here](https://github.com/athirazizi/RayTracing/blob/37887afd320b09105da20d9d737fbd7c8cb97a5c/RayTracing/src/Renderer.cpp#L186). This calculates the payload position and normal.
 
 ## 7.3 Miss shader
 
-The `Miss()` implementation can be seen [here](). This simply returns the payload if no objects have been hit.
+The `Miss()` implementation can be seen [here](https://github.com/athirazizi/RayTracing/blob/37887afd320b09105da20d9d737fbd7c8cb97a5c/RayTracing/src/Renderer.cpp#L205). This simply returns the payload if no objects have been hit.
 
 ## 7.4 Reflection
 
@@ -1957,18 +1881,17 @@ The `glm::reflect()` [function](https://registry.khronos.org/OpenGL-Refpages/gl4
 
 Hit F5 and this is what we get:
 
-<figure>
-<img src="https://i.imgur.com/60VSm5y.png">
-<figcaption>Figure 58. Reflection between two spheres.</figcaption>
-</figure><br><br>
+<div align="center">
+	<img src="https://i.imgur.com/60VSm5y.png" width="90%">
+	<br><sub>Figure 58. Reflection between two spheres.</sub>
+</div><br>
 
-<figure>
-<img src="https://i.imgur.com/r6uWZMY.png">
-<figcaption>Figure 58. Reflection between four spheres.</figcaption>
-</figure><br><br>
+<div align="center">
+	<img src="https://i.imgur.com/r6uWZMY.png" width="90%">
+	<br><sub>Figure 59. Reflection between four spheres.</sub>
+</div><br>
 
-
-The code at this point can be seen [here]().
+The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/37887afd320b09105da20d9d737fbd7c8cb97a5c/RayTracing/src).
 
 # 08 Materials & Physically Based Rendering (PBR)
 
