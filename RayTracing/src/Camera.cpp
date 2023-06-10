@@ -1,3 +1,16 @@
+/*
+	MIT License
+	Copyright (c) 2022 Studio Cherno
+
+	Title: Walnut Camera - Camera.cpp
+	Author: https://github.com/TheCherno
+	Date: 2023
+
+	Availability: https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Camera.cpp
+
+	Notes: This file has been modified to suit the project's needs.
+*/
+
 #include "Camera.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -69,9 +82,9 @@ bool Camera::OnUpdate(float ts) {
 
 	// Rotation
 	if (delta.x != 0.0f || delta.y != 0.0f) {
-		
+
 		float pitchDelta = delta.y * GetRotationSpeed();
-		
+
 		float yawDelta = delta.x * GetRotationSpeed();
 
 		// Captures the delta in all axes
@@ -127,10 +140,10 @@ void Camera::RecalculateRayDirections() {
 			// Intermediate vector
 			// Inverse projection * coordinates
 			glm::vec4 target = m_InverseProjection * glm::vec4(coord.x, coord.y, 1, 1);
-			
+
 			// Inverse view * target/perspective division
 			glm::vec3 rayDirection = glm::vec3(m_InverseView * glm::vec4(glm::normalize(glm::vec3(target) / target.w), 0)); // World space
-			
+
 			// Cache the ray direction
 			m_RayDirections[x + y * m_ViewportWidth] = rayDirection;
 		}

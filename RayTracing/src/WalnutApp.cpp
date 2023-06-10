@@ -1,3 +1,15 @@
+/*
+	MIT License
+	Copyright (c) 2023 Athir Azizi
+
+	Title: WalnutApp.cpp
+	Author: https://github.com/athirazizi
+	Date: 2023
+
+	Availability: https://github.com/athirazizi/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
+	Adapted from: https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp (MIT License - Copyright (c) 2022 Studio Cherno)
+*/
+
 #include "Walnut/Application.h"
 #include "Walnut/EntryPoint.h"
 
@@ -7,7 +19,7 @@
 #include "Renderer.h"
 #include "Camera.h"
 
-#include "glm/gtc/type_ptr.hpp"
+#include <glm/gtc/type_ptr.hpp>
 
 using namespace Walnut;
 
@@ -15,49 +27,68 @@ class ExampleLayer : public Walnut::Layer
 {
 public:
 	ExampleLayer()
-		: m_Camera(45.0f, 0.1f, 100.0f)
+		: camera_(45.0f, 0.1f, 100.0f)
 	{
+		// spheres in the scene
+		{
+			Sphere sphere;
+			sphere.Position = { -1.5f, 0.0f, 0.0f };
+			sphere.Radius = 0.5f;
+			sphere.Albedo = { 0.0f, 1.0f, 1.0f };
+			scene_.Spheres.push_back(sphere);
+		}
+
 		{
 			Sphere sphere;
 			sphere.Position = { 0.0f, 0.0f, 0.0f };
-			sphere.Radius = 1.0f;
-			sphere.Albedo = { 0.0f,1.0f,0.0f };
-			m_Scene.Spheres.push_back(sphere);
+			sphere.Radius = 0.5f;
+			sphere.Albedo = { 1.0f, 0.0f, 1.0f };
+			scene_.Spheres.push_back(sphere);
 		}
+
 		{
 			Sphere sphere;
-			sphere.Position = { -2.0f, 0.5f, -5.0f };
-			sphere.Radius = 1.0f;
-			sphere.Albedo = { 0.0f,1.0f,1.0f };
-			m_Scene.Spheres.push_back(sphere);
+			sphere.Position = { 1.5f, 0.0f, 0.0f };
+			sphere.Radius = 0.5f;
+			sphere.Albedo = { 1.0f, 1.0f, 0.0f };
+			scene_.Spheres.push_back(sphere);
+		}
+
+		{
+			Sphere sphere;
+			sphere.Position = { 0.0f, 0.0f, 1.5f };
+			sphere.Radius = 0.5f;
+			sphere.Albedo = { 1.0f, 1.0f, 1.0f };
+			scene_.Spheres.push_back(sphere);
 		}
 	}
 
 	virtual void OnUpdate(float ts) override
 	{
-		m_Camera.OnUpdate(ts);
+		camera_.OnUpdate(ts);
 	}
 
 	virtual void OnUIRender() override
 	{
 		ImGui::Begin("Settings");
-		ImGui::Text("Last render: %.3fms", m_LastRenderTime);
+		ImGui::Text("FPS: %.0f", fps_);
+		ImGui::Text("Render time: %.2fms", render_time_);
 
+		/*
 		if (ImGui::Button("Render"))
 		{
-			// this renders every frame.
 			Render();
 		}
+		*/
 
 		ImGui::End();
 
 		ImGui::Begin("Scene");
-
-		for (size_t i = 0; i < m_Scene.Spheres.size(); i++)
+		for (size_t i = 0; i < scene_.Spheres.size(); i++)
 		{
 			ImGui::PushID(i);
-			Sphere& sphere = m_Scene.Spheres[i];
 
+			Sphere& sphere = scene_.Spheres[i];
 			ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f);
 			ImGui::DragFloat("Radius", &sphere.Radius, 0.1f);
 			ImGui::ColorEdit3("Albedo", glm::value_ptr(sphere.Albedo));
@@ -66,21 +97,18 @@ public:
 
 			ImGui::PopID();
 		}
-
 		ImGui::End();
 
-		// gets rid of border around the viewport
+		// gets rid of padding around the viewport
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-
 		// this is the camera
 		ImGui::Begin("Viewport");
-		
-		// these are float values
-		m_ViewportWidth = ImGui::GetContentRegionAvail().x;	
-		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
-		
-		auto image = m_Renderer.GetFinalImage();
 
+		// these are float values
+		viewport_width_ = ImGui::GetContentRegionAvail().x;
+		viewport_height_ = ImGui::GetContentRegionAvail().y;
+
+		auto image = renderer_.GetFinalImage();
 		if (image)
 		{
 			// if there is an image, then display the image
@@ -94,43 +122,46 @@ public:
 		Render();
 	}
 
-	void Render() 
+	void Render()
 	{
 		Timer timer;
 
-		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
-		m_Camera.OnResize(m_ViewportWidth, m_ViewportHeight);
-		m_Renderer.Render(m_Scene, m_Camera);
+		renderer_.OnResize(viewport_width_, viewport_height_);
+		camera_.OnResize(viewport_width_, viewport_height_);
+		renderer_.Render(scene_, camera_);
 
-		m_LastRenderTime = timer.ElapsedMillis();
+		fps_ = 1000.f / timer.ElapsedMillis();
+		render_time_ = timer.ElapsedMillis();
 	}
-
 private:
-	Renderer m_Renderer;
-	Camera m_Camera;
-	// buffer for image data
-	Scene m_Scene;
-	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
-	float m_LastRenderTime = 0.0f;
+	// data members
+
+	Renderer renderer_;
+	Camera camera_;
+	Scene scene_;
+	uint32_t viewport_width_ = 0, viewport_height_ = 0;
+
+	float fps_ = 0.0f;
+	float render_time_ = 0.0f;
 };
 
 Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 {
 	Walnut::ApplicationSpecification spec;
-	spec.Name = "RayTracing";
+	spec.Name = "Ray Tracing";
 
 	Walnut::Application* app = new Walnut::Application(spec);
 	app->PushLayer<ExampleLayer>();
 	app->SetMenubarCallback([app]()
-	{
-		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem("Exit"))
+			if (ImGui::BeginMenu("File"))
 			{
-				app->Close();
+				if (ImGui::MenuItem("Exit"))
+				{
+					app->Close();
+				}
+				ImGui::EndMenu();
 			}
-			ImGui::EndMenu();
-		}
-	});
-	return app;	
+		});
+	return app;
 }

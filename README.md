@@ -1,4 +1,4 @@
-# RayTracing
+# Scene Rendering with Ray Tracing
 
 This GitHub repo serves as a front to present the researcher's BSc project on 'Scene Rendering using Ray Tracing'.
 
@@ -1853,10 +1853,154 @@ for (size_t i = 0; i < m_Scene.Spheres.size(); i++)
 The result is:
 
 <figure>
-<img src="https://i.imgur.com/3iaQlBi.png">
+<img src="https://i.imgur.com/LTlVjfp.png">
 <figcaption>Figure 55. A scene with two customisable spheres.</figcaption>
 </figure><br/><br/>
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/1d88255b3fc612ce7601ff42767314be4089edc2/RayTracing/src).
 
-# 07 A Modern Ray Tracing Pipeline
+# 07 Modern Ray Tracing Pipelines
+
+Relevant sources:
+
+- [NVIDIA - The Ray Tracing Pipeline](https://www.youtube.com/watch?v=LoKUmbvbcRY)
+- [NVIDIA - Ray Tracing Effects](https://www.youtube.com/watch?v=Rk5nD8tt_W4)
+- [NVIDIA - DirectX Ray Tracing](https://developer.nvidia.com/blog/introduction-nvidia-rtx-directx-ray-tracing/)
+- [NVIDIA - DX12 Ray Tracing Tutorial - Part 2](https://developer.nvidia.com/rtx/raytracing/dxr/dx12-raytracing-tutorial-part-2)
+
+In this section, we will be refactoring the program to use modern ray tracing pipeline components. NVIDIA's DirectX uses 5 distinct shaders for ray tracing:
+
+1. **Ray generation shader** - responsible for generating rays; sets up initial ray parameters
+2. **Intersection shader** - determines if a ray-object intersection occurs and provides information about that intersection (surface normals, textures, material properties)
+3. **Miss shader** - invoked when no ray-object intersection occurs, typically returning the background colour
+4. **Closest hit shader** - invoked when a ray-object intersection occurs; returns the final colour and appearance of the intersected object, while considering its properties
+5. **Any-hit shader** - optional shader used for transparent/translucent textures 
+
+<figure>
+<img src="https://i.imgur.com/Dv0V4BE.png">
+<figcaption>Figure 56. The ray tracing pipeline. Adapted from <a href="https://arxiv.org/pdf/2006.11348.pdf">NVIDIA</a>.</figcaption>
+</figure><br><br>
+
+The current `Render()` function sends a ray for each pixel in the viewport and within the function, `TraceRay()` returns a colour for each ray that is traced. However, in modern ray tracing pipelines, typically more than one ray is casted for each pixel to decide its final colour.
+
+<figure>
+<img src="https://i.imgur.com/oUHS2ri.png">
+<figcaption>Figure 57. The ray tracing process. Adapted from <a href="https://www.youtube.com/watch?v=LoKUmbvbcRY">NVIDIA</a>.</figcaption>
+</figure><br><br>
+
+After sending out rays, they will traverse throughout the scene. Depending on the invoked shaders, such as the closest hit shader, the rays could recurse and additional rays are sent out and these would affect the final rendered colour of each pixel.
+
+We will be using NVIDIA's naming conventions for the mentioned shaders:
+
+- `RayGen()` - ray generation shader
+- `ClosestHit()` - closest hit shader
+- `Miss()` - miss shader
+
+The intersection shader is built into the `TraceRay()` function and the `AnyHit()` shader is skipped for now.
+
+## 7.1 Ray Generation Shader
+
+`TraceRay()` is invoked in the `RayGen()` function and it should only be responsible for shooting out rays and return something called a payload ("the result of the execution of various shaders potentially invoked during raytracing").
+
+We will store this payload into a struct `HitInfo`:
+
+```cpp
+struct HitInfo {
+	float HitDistance;
+	glm::vec3 WorldPosition;
+	glm::vec3 WorldNormal;
+	uint32_t ObjectIndex;
+};
+```
+
+This is the new return data type for `TraceRay()`.
+
+Additionally, the `HitInfo` is used for `ClosestHit()` and `Miss()`:
+
+```cpp
+// ray generation shader
+glm::vec4 RayGen(uint32_t x, uint32_t y);
+HitInfo TraceRay(const Ray& ray);
+
+// closest-hit shader
+HitInfo ClosestHit(const Ray& ray, uint32_t object_index, float hit_distance);
+
+// miss shader
+HitInfo Miss(const Ray& ray);
+```
+
+The `RayGen()` implementation can be seen [here](). It generates rays for every pixel in the scene and invokes `TraceRay()` which sets the colour for each pixel. It also handles lighting/shading calculations.
+
+The `TraceRay()` implementation can be seen [here](). It is responsible for tracing each ray in the scene, and determines if ray-object intersection occurs. If it does, `ClosestHit()` is invoked, else `Miss()` is invoked.
+
+## 7.2 Closest-hit shader
+
+The `ClosestHit()` implementation can be seen [here](). This calculates the payload position and normal.
+
+## 7.3 Miss shader
+
+The `Miss()` implementation can be seen [here](). This simply returns the payload if no objects have been hit.
+
+## 7.4 Reflection
+
+As mentioned before, it is possible to recurse and send out additional rays for various rendering effects like reflection, ambient occlusion, and hard shadows.
+
+If the statements in `RayGen()` were iterated for each bounce, we could calculate the origin and direction for reflection rays like so:
+
+```cpp
+// change origin and direction for the next bounce
+ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
+ray.Direction = glm::reflect(ray.Direction, payload.WorldNormal);
+```
+
+The `glm::reflect()` [function](https://registry.khronos.org/OpenGL-Refpages/gl4/html/reflect.xhtml) calculates the reflection direction for an incident vector. Note that we have to offset `payload.WorldNormal` by a small amount to ensure the reflection ray bounces off the surface of the sphere.
+
+Hit F5 and this is what we get:
+
+<figure>
+<img src="https://i.imgur.com/60VSm5y.png">
+<figcaption>Figure 58. Reflection between two spheres.</figcaption>
+</figure><br><br>
+
+<figure>
+<img src="https://i.imgur.com/r6uWZMY.png">
+<figcaption>Figure 58. Reflection between four spheres.</figcaption>
+</figure><br><br>
+
+
+The code at this point can be seen [here]().
+
+# 08 Materials & Physically Based Rendering (PBR)
+
+Relevant sources:
+
+- source
+- source
+
+# 09 Path Tracing
+
+Relevant sources:
+
+- source
+- source
+
+# 10 Multithreaded Rendering, Parallel Processing, & Optimisation
+
+Relevant sources:
+
+- source
+- source
+
+# 11 Further system improvements
+
+Relevant sources:
+
+- source
+- source
+
+# 12 Emission & Emissive Materials
+
+Relevant sources:
+
+- source
+- source

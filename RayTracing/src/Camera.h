@@ -1,3 +1,16 @@
+/*
+	MIT License
+	Copyright (c) 2022 Studio Cherno
+
+	Title: Walnut Camera - Camera.h
+	Author: https://github.com/TheCherno
+	Date: 2023
+
+	Availability: https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Camera.h
+
+	Notes: This file has been modified to suit the project's needs.
+*/
+
 #pragma once
 
 #include <glm/glm.hpp>
