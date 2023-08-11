@@ -1911,13 +1911,13 @@ Suppose that the scene is set up like so:
 	<br><sub>Figure 60. A primary sphere and a secondary sphere acting as a floor.</sub>
 </div><br>
 
-In the `Sphere` struct, it has an `Albedo` property which is the non-illuminated surface colour. However,  it does not have a reflective property. Material properties can vary and so it can be difficult to parameterise to represent materials in the real world.
+In the `Sphere` struct, it has an `Albedo` property which is the non-illuminated surface colour. However,  it does not have a reflective property. Material properties can vary and so it can be difficult to parameterise these properties and represent them asmaterials in the real world.
 
 ## 8.2 Physically Based Rendering (PBR)
 
-[Physically based rendering](https://en.wikipedia.org/wiki/Physically_based_rendering) (PBR) is a rendering approach which aims to standardise these parameters to produce digitally realistic materials. PBR is implemented and used in software such as Unity, Unreal Engine, Blender, Maya, and Cinema 4D. Likewise, we will implemented these ideas in our ray tracing system.
+[Physically based rendering](https://en.wikipedia.org/wiki/Physically_based_rendering) (PBR) is a rendering approach which aims to standardise these parameters to produce digitally realistic materials. PBR is implemented and used in software such as Unity, Unreal Engine, Blender, Maya, and Cinema 4D. Likewise, we will implement these ideas in our ray tracing system.
 
-PBRT discusses different [material implementations](https://pbr-book.org/3ed-2018/Materials/Material_Interface_and_Implementations), including matte, plastic, mix, fourier, glass, metal, and translucent materials. Due to the scope of the project, we will be focusing on certain material parameters, such as roughness and metallic.
+PBRT discusses different [material implementations](https://pbr-book.org/3ed-2018/Materials/Material_Interface_and_Implementations), including matte, plastic, mix, fourier, glass, metal, and translucent materials. Due to the scope of the project, we will be focusing on core material parameters, such as roughness and metallic.
 
 We can begin by separating the `Albedo` property from the `Sphere` into another struct called `Material` and add two new properties: `Roughness` and `Metallic`.
 
@@ -1954,7 +1954,7 @@ A crucial part of tracing surface reflection is that every surface is composed o
 	<br><sub>Figure 61. Rough and smooth microfacet models. Adapted from <a href="https://pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models#">PBRT</a>.</sub>
 </div><br>
 
-Light reflection is affected by the distribution of microfacet normals $n_f$ with respect to the surface normal $n$. Higher variations of microfacet normals result in a roughter surface.
+Light reflection is affected by the distribution of microfacet normals $n_f$ with respect to the surface normal $n$. Higher variations of microfacet normals result in a rougher surface.
 
 <div align="center">
 	<img src="https://i.imgur.com/da60Q1v.png">
@@ -1963,11 +1963,11 @@ Light reflection is affected by the distribution of microfacet normals $n_f$ wit
 
 Microfacet models can cause different geometric effects to occur as seen in the figure above:
 
-- (a) Masking - a microfacet occludes another microfacet.
-- (b) Shadowing - light cannot reach a microfacet.
+- (a) Masking - a microfacet occludes another microfacet from light sources.
+- (b) Shadowing - light sources cannot reach a microfacet because another microfacet occludes it.
 - (c) Interreflection - light reflects between microfacets before reaching the camera.
 
-Due to these behaviours, we have to factor in the roughness when calculating light distribution.
+Due to these behaviours, we have to factor in the roughness when calculating the reflected ray direction.
 
 ```cpp
 ray.Direction = glm::reflect(ray.Direction, 
@@ -1997,7 +1997,7 @@ We can change the background colour to a light blue to test ambient occlusion:
 
 ## 8.4 The Material System
 
-In modern ray tracing systems, materials implemented as an interface where it is separated from objects, such that materials can be re-used for different objects.
+In modern ray tracing systems, materials are implemented as an interface where it is separated from objects, such that materials can be re-used for different objects.
 
 We can add a vector of materials in the `scene` struct which will act as a buffer of materials to be used in the scene:
 
@@ -2029,7 +2029,7 @@ greySphere.Roughness = 0.1f;
 	<br><sub>Figure 65. Current scene with new material system.</sub>
 </div><br>
 
-The code at this point can be seen [here]().
+The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/a1cbf9f400d4d40ea762338643d847205548c41a).
 
 # 09 Path Tracing
 
