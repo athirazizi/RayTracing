@@ -1897,8 +1897,139 @@ The code at this point can be seen [here](https://github.com/athirazizi/RayTraci
 
 Relevant sources:
 
-- source
-- source
+- [PBRT - 09 Materials](https://www.pbr-book.org/3ed-2018/Materials)
+- [PBRT - 08 Reflection Models](https://pbr-book.org/3ed-2018/Reflection_Models)
+
+## 8.1 Materials
+
+In the real world, every object has a surface material which factors into its appearance. Ray tracing systems need to handle how light behaves depending on the surface properties of these objects. This is called surface scattering.
+
+Suppose that the scene is set up like so:
+
+<div align="center">
+	<img src="https://i.imgur.com/PkJPUu3.png" width="90%">
+	<br><sub>Figure 60. A primary sphere and a secondary sphere acting as a floor.</sub>
+</div><br>
+
+In the `Sphere` struct, it has an `Albedo` property which is the non-illuminated surface colour. However,  it does not have a reflective property. Material properties can vary and so it can be difficult to parameterise to represent materials in the real world.
+
+## 8.2 Physically Based Rendering (PBR)
+
+[Physically based rendering](https://en.wikipedia.org/wiki/Physically_based_rendering) (PBR) is a rendering approach which aims to standardise these parameters to produce digitally realistic materials. PBR is implemented and used in software such as Unity, Unreal Engine, Blender, Maya, and Cinema 4D. Likewise, we will implemented these ideas in our ray tracing system.
+
+PBRT discusses different [material implementations](https://pbr-book.org/3ed-2018/Materials/Material_Interface_and_Implementations), including matte, plastic, mix, fourier, glass, metal, and translucent materials. Due to the scope of the project, we will be focusing on certain material parameters, such as roughness and metallic.
+
+We can begin by separating the `Albedo` property from the `Sphere` into another struct called `Material` and add two new properties: `Roughness` and `Metallic`.
+
+```cpp
+struct Material
+{
+	glm::vec3 Albedo{ 1.0f };
+	float Roughness = 1.0f;
+	float Metallic = 0.0f;
+};
+
+struct Sphere
+{
+	float Radius = 0.5f;
+	glm::vec3 Position{ 0.0f };
+	Material Mat;
+};
+```
+
+As such we can access these properties by using `sphere.Mat.Albedo`, `sphere.Mat.Roughness`, and `sphere.Mat.Metallic` respectively. We can add `ImGui` controls to change these parameters as well:
+
+```cpp
+ImGui::DragFloat("Rougness", &sphere.Mat.Roughness);
+ImGui::DragFloat("Metallic", &sphere.Mat.Metallic);
+```
+
+## 8.3 Microfacet Models
+
+A crucial part of tracing surface reflection is that every surface is composed of [microfacet models](https://pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models#) which proposes the idea that not every surface is perfectly smooth on a microsurface level. 
+
+
+<div align="center">
+	<img src="https://i.imgur.com/6juKcaH.png">
+	<br><sub>Figure 61. Rough and smooth microfacet models. Adapted from <a href="https://pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models#">PBRT</a>.</sub>
+</div><br>
+
+Light reflection is affected by the distribution of microfacet normals $n_f$ with respect to the surface normal $n$. Higher variations of microfacet normals result in a roughter surface.
+
+<div align="center">
+	<img src="https://i.imgur.com/da60Q1v.png">
+	<br><sub>Figure 62. Geometric effects caused by microfacet models. Adapted from <a href="https://pbr-book.org/3ed-2018/Reflection_Models/Microfacet_Models#">PBRT</a>.</sub>
+</div><br>
+
+Microfacet models can cause different geometric effects to occur as seen in the figure above:
+
+- (a) Masking - a microfacet occludes another microfacet.
+- (b) Shadowing - light cannot reach a microfacet.
+- (c) Interreflection - light reflects between microfacets before reaching the camera.
+
+Due to these behaviours, we have to factor in the roughness when calculating light distribution.
+
+```cpp
+ray.Direction = glm::reflect(ray.Direction, 
+	payload.WorldNormal + sphere.Mat.Roughness * Walnut::Random::Vec3(-0.5f, 0.5f));
+```
+
+Here we are offsetting the normal by the material's roughness. Additionally, this value is multiplied by a random float between $-0.5$ and $0.5$ because it is the easiest way to implement variation in the microfacet normals.
+
+<div align="center">
+	<img src="https://imgur.com/7tkjdaF.gif" width="90%">
+	<br><sub>Figure 63. Light reflection with microfacet models.</sub>
+</div><br>
+
+With both spheres of roughness $1$, the program produces a noisy scene. We can lower the roughness of the grey sphere to $0.1$ which results in a rough reflection of the green sphere:
+
+<div align="center">
+	<img src="https://i.imgur.com/WKEuvGJ.gif" width="90%">
+	<br><sub>Figure 64. Lower roughness results in a clearer reflection.</sub>
+</div><br>
+
+We can change the background colour to a light blue to test ambient occlusion:
+
+<div align="center">
+	<img src="https://i.imgur.com/hY1rwuH.gif" width="90%">
+	<br><sub>Figure 64. Ambient occlusion of the background colour.</sub>
+</div><br>
+
+## 8.4 The Material System
+
+In modern ray tracing systems, materials implemented as an interface where it is separated from objects, such that materials can be re-used for different objects.
+
+We can add a vector of materials in the `scene` struct which will act as a buffer of materials to be used in the scene:
+
+```cpp
+std::vector<Material> Materials;
+```
+
+Each object in the scene can then be applied a `MaterialIndex` which dictates its surface material.
+
+For example, to set the materials of the objects currently in the scene:
+
+```cpp
+Material& greySphere = scene_.Materials.emplace_back();
+greySphere.Albedo = { 0.2f, 0.2f, 0.2f };
+greySphere.Roughness = 0.1f;
+
+// spheres in the scene
+{
+	Sphere sphere;
+	sphere.Position = { 0.0f, 0.0f, 0.0f };
+	sphere.Radius = 1.0f;
+	sphere.MaterialIndex = 0;
+	scene_.Spheres.push_back(sphere);
+}
+```
+
+<div align="center">
+	<img src="https://i.imgur.com/zgasOUd.gif" width="90%">
+	<br><sub>Figure 65. Current scene with new material system.</sub>
+</div><br>
+
+The code at this point can be seen [here]().
 
 # 09 Path Tracing
 

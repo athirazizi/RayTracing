@@ -80,7 +80,7 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 	glm::vec3 final_color(0.0f);
 	float multiplier = 1.0f;
 
-	int bounces = 2;
+	int bounces = 5;
 	for (int i = 0; i < bounces; i++)
 	{
 		// get payload from trace ray
@@ -88,7 +88,7 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 		if (payload.HitDistance < 0.0f)
 		{
 			// return background colour if missed
-			glm::vec3 background_color = glm::vec3(0.1f, 0.1f, 0.1f);
+			glm::vec3 background_color = glm::vec3(0.7f, 0.9f, 1.0f);
 
 			// take into account background colour when rendering
 			final_color += background_color * multiplier;
@@ -96,14 +96,17 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 		}
 
 		// you can change the light direction here
-		glm::vec3 light_direction = glm::normalize(glm::vec3(0.0f, -1.0f, -0.5f));
+		glm::vec3 light_direction = glm::normalize(glm::vec3(-0.5f, -1.0f, -0.5f));
 
 		// dot(normal, -lightDir) == cos(angle)
 		float light_intensity = glm::max(glm::dot(payload.WorldNormal, -light_direction), 0.0f); // == cos(angle)
 
 		// intersected sphere
 		const Sphere& sphere = active_scene_->Spheres[payload.ObjectIndex];
-		glm::vec3 sphere_color = sphere.Albedo;
+		// associated material
+		const Material& material = active_scene_->Materials[sphere.MaterialIndex];
+
+		glm::vec3 sphere_color = material.Albedo;
 		sphere_color *= light_intensity;
 
 		// darken the image by multiplier
@@ -113,7 +116,11 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 
 		// change origin and direction for the next bounce
 		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
-		ray.Direction = glm::reflect(ray.Direction, payload.WorldNormal);
+
+		// reflect according to the microfacet model
+		// i.e., roughness, and a range
+		ray.Direction = glm::reflect(ray.Direction, 
+			payload.WorldNormal + material.Roughness * Walnut::Random::Vec3(-0.5f, 0.5f));
 	}
 
 	//color = normal * 0.5f + 0.5f; // sets x,y,z as r,g,b

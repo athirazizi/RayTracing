@@ -29,38 +29,32 @@ public:
 	ExampleLayer()
 		: camera_(45.0f, 0.1f, 100.0f)
 	{
+		// materials in the scene
+		Material& greenSphere = scene_.Materials.emplace_back();
+		greenSphere.Albedo = { 0.0f, 1.0f, 0.0f };
+		greenSphere.Roughness = 0.1f;
+
+		Material& greySphere = scene_.Materials.emplace_back();
+		greySphere.Albedo = { 0.2f, 0.2f, 0.2f };
+		greySphere.Roughness = 0.1f;
+
 		// spheres in the scene
 		{
 			Sphere sphere;
-			sphere.Position = { -1.5f, 0.0f, 0.0f };
-			sphere.Radius = 0.5f;
-			sphere.Albedo = { 0.0f, 1.0f, 1.0f };
-			scene_.Spheres.push_back(sphere);
-		}
-
-		{
-			Sphere sphere;
 			sphere.Position = { 0.0f, 0.0f, 0.0f };
-			sphere.Radius = 0.5f;
-			sphere.Albedo = { 1.0f, 0.0f, 1.0f };
+			sphere.Radius = 1.0f;
+			sphere.MaterialIndex = 0;
 			scene_.Spheres.push_back(sphere);
 		}
 
 		{
 			Sphere sphere;
-			sphere.Position = { 1.5f, 0.0f, 0.0f };
-			sphere.Radius = 0.5f;
-			sphere.Albedo = { 1.0f, 1.0f, 0.0f };
+			sphere.Position = { 0.0f, -101.0f, 0.0f };
+			sphere.Radius = 100.0f;
+			sphere.MaterialIndex = 1;
 			scene_.Spheres.push_back(sphere);
 		}
 
-		{
-			Sphere sphere;
-			sphere.Position = { 0.0f, 0.0f, 1.5f };
-			sphere.Radius = 0.5f;
-			sphere.Albedo = { 1.0f, 1.0f, 1.0f };
-			scene_.Spheres.push_back(sphere);
-		}
 	}
 
 	virtual void OnUpdate(float ts) override
@@ -84,6 +78,8 @@ public:
 		ImGui::End();
 
 		ImGui::Begin("Scene");
+
+		// iterate through spheres
 		for (size_t i = 0; i < scene_.Spheres.size(); i++)
 		{
 			ImGui::PushID(i);
@@ -91,12 +87,28 @@ public:
 			Sphere& sphere = scene_.Spheres[i];
 			ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f);
 			ImGui::DragFloat("Radius", &sphere.Radius, 0.1f);
-			ImGui::ColorEdit3("Albedo", glm::value_ptr(sphere.Albedo));
+			ImGui::DragInt("Material", &sphere.MaterialIndex, 1.0f, 0, (int)scene_.Materials.size() - 1);
 
 			ImGui::Separator();
-
 			ImGui::PopID();
 		}
+
+		// iterate through materials
+		for (size_t i = 0; i < scene_.Materials.size(); i++)
+		{
+			ImGui::PushID(i);
+
+			Material& material = scene_.Materials[i];
+
+			ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
+			ImGui::DragFloat("Rougness", &material.Roughness, 0.05f, 0.0f, 1.0f);
+			ImGui::DragFloat("Metallic", &material.Metallic, 0.05f, 0.0f, 1.0f);
+
+			ImGui::Separator();
+			ImGui::PopID();
+		}
+
+
 		ImGui::End();
 
 		// gets rid of padding around the viewport
