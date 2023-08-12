@@ -2035,8 +2035,97 @@ The code at this point can be seen [here](https://github.com/athirazizi/RayTraci
 
 Relevant sources:
 
-- source
-- source
+- [PBRT 14.5 - Path Tracing](https://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Path_Tracing)
+
+## 9.1 The Need for Path Tracing
+
+The `RayGen()` function is invoked in the `Render()` function every frame. Currently, the rays sent into the scene bounce a fixed number of times every frame, where the reflected rays deviate randomly from the surface normal. This results in a noisy scene output.
+
+In the real world, every surface has a roughness. However, light does not randomly scatter every second. It instead accumulates and converges which results in the surface's final appearance. This is essentially the goal of path tracing, where subsurface scattering is accumulated.
+
+## 9.2 Accumulation
+
+This accumulation can be stored in the `Renderer` class as a private member:
+
+```cpp
+glm::vec4* accumulation_data_ = nullptr;
+```
+
+In the `OnResize` function, we have to allocate the width and height for the accumulation data:
+
+```cpp
+// allocate accumulation data size
+delete[] accumulation_data_;
+accumulation_data_ = new glm::vec4[width * height];
+```
+
+When accumulating ray reflections, we have to calculate the average path traces taken from the start of the render to the current frame render. As such we need a frame index to keep track of the number of frames that have been rendered. This can be a private member of the `Renderer` class:
+
+```cpp
+uint32_t frame_index_ = 1;
+```
+
+We have to reset the frame index since path traces will be different when the camera moves throughout the scene. Naturally, the accumulation will only occur when the camera is still.
+
+```cpp
+// to reset the frame index when the camera moves
+void ResetFrameIndex() { frame_index_ = 1; }
+```
+
+The UI for accumulation can be implemented like so:
+
+```cpp
+// accumulate path tracing
+ImGui::Checkbox("Accumulate", &renderer_.GetSettings().Accumulate);
+
+if (ImGui::Button("Reset accumulation"))
+{
+	renderer_.ResetFrameIndex();
+}
+```
+
+## 9.3 Accumulating path tracing samples
+
+The final colour will be the accumulated colour since the first render. In `Render()`, we can update this change:
+
+```cpp
+// reset accumulation data on first frame
+if (frame_index_ == 1)
+{
+	memset(accumulation_data_, 0, final_image_->GetWidth() * final_image_->GetHeight() * sizeof(glm::vec4));
+}
+
+for (uint32_t y = 0; y < final_image_->GetHeight(); y++)
+{
+	for (uint32_t x = 0; x < final_image_->GetWidth(); x++)
+	{
+		// set color to each pixel
+		glm::vec4 color = RayGen(x, y);
+
+		// accumulate colour to be returned
+		accumulation_data_[x + y * final_image_->GetWidth()] += color;
+		glm::vec4 accumulated_color = accumulation_data_[x + y * final_image_->GetWidth()];
+		accumulated_color /= (float)frame_index_;
+
+		// clamp range to between 0 and 1
+		accumulated_color = glm::clamp(accumulated_color, glm::vec4(0.0f), glm::vec4(1.0f));
+
+		// send color to image data
+		image_data_[x + y * final_image_->GetWidth()] = utility::ConvertToRGBA(accumulated_color);
+	}
+}
+```
+
+We accumulate the color returned by `RayGen()` and divide it by `frame_index_` to render the final colour.
+
+<div align="center">
+	<img src="https://i.imgur.com/rj1sqTT.gif" width="90%">
+	<br><sub>Figure 66. Accumulation on/off.</sub>
+</div><br>
+
+Reflections become clearer as more samples are accumulated.
+
+The code at this point can be seen [here]().
 
 # 10 Multithreaded Rendering, Parallel Processing, & Optimisation
 

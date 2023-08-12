@@ -42,14 +42,25 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 		final_image_ = std::make_shared<Walnut::Image>(width, height, Walnut::ImageFormat::RGBA);
 	}
 
+	// allocate image size
 	delete[] image_data_;
 	image_data_ = new uint32_t[width * height];
+
+	// allocate accumulation data size
+	delete[] accumulation_data_;
+	accumulation_data_ = new glm::vec4[width * height];
 }
 
 void Renderer::Render(const Scene& scene, const Camera& camera)
 {
 	active_scene_ = &scene;
 	active_camera_ = &camera;
+
+	// reset accumulation data on first frame
+	if (frame_index_ == 1)
+	{
+		memset(accumulation_data_, 0, final_image_->GetWidth() * final_image_->GetHeight() * sizeof(glm::vec4));
+	}
 
 	for (uint32_t y = 0; y < final_image_->GetHeight(); y++)
 	{
@@ -58,15 +69,31 @@ void Renderer::Render(const Scene& scene, const Camera& camera)
 			// set color to each pixel
 			glm::vec4 color = RayGen(x, y);
 
+			// accumulate colour to be returned
+			accumulation_data_[x + y * final_image_->GetWidth()] += color;
+			glm::vec4 accumulated_color = accumulation_data_[x + y * final_image_->GetWidth()];
+			accumulated_color /= (float)frame_index_;
+
 			// clamp range to between 0 and 1
-			color = glm::clamp(color, glm::vec4(0.0f), glm::vec4(1.0f));
+			accumulated_color = glm::clamp(accumulated_color, glm::vec4(0.0f), glm::vec4(1.0f));
 
 			// send color to image data
-			image_data_[x + y * final_image_->GetWidth()] = utility::ConvertToRGBA(color);
+			image_data_[x + y * final_image_->GetWidth()] = utility::ConvertToRGBA(accumulated_color);
 		}
 	}
 
 	final_image_->SetData(image_data_);
+
+	// increments frame index if accumulation is turned on
+	if (settings_.Accumulate == true)
+	{
+		frame_index_++;
+	}
+	else
+	{
+		//ResetFrameIndex();
+		frame_index_ = 1;
+	}
 }
 
 glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
@@ -96,7 +123,7 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 		}
 
 		// you can change the light direction here
-		glm::vec3 light_direction = glm::normalize(glm::vec3(-0.5f, -1.0f, -0.5f));
+		glm::vec3 light_direction = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
 
 		// dot(normal, -lightDir) == cos(angle)
 		float light_intensity = glm::max(glm::dot(payload.WorldNormal, -light_direction), 0.0f); // == cos(angle)

@@ -24,12 +24,25 @@
 class Renderer
 {
 public:
+	struct Settings
+	{
+		// 
+		bool Accumulate = true;
+	};
+
+public:
 	Renderer() = default;
 
 	void OnResize(uint32_t width, uint32_t height);
 	void Render(const Scene& scene, const Camera& camera);
 
 	std::shared_ptr<Walnut::Image> GetFinalImage() const { return final_image_; }
+
+	// to reset the frame index when the camera moves
+	void ResetFrameIndex() { frame_index_ = 1; }
+
+	// return settings struct
+	Settings& GetSettings() { return settings_; }
 private:
 	struct HitInfo
 	{
@@ -56,4 +69,10 @@ private:
 	const Camera* active_camera_ = nullptr;
 
 	uint32_t* image_data_ = nullptr;
+	glm::vec4* accumulation_data_ = nullptr;
+
+	// to count the number of frames since the first render
+	uint32_t frame_index_ = 1;
+
+	Settings settings_;
 };

@@ -59,7 +59,11 @@ public:
 
 	virtual void OnUpdate(float ts) override
 	{
-		camera_.OnUpdate(ts);
+		// reset accumulation when moving camera
+		if (camera_.OnUpdate(ts))
+		{
+			renderer_.ResetFrameIndex();
+		}
 	}
 
 	virtual void OnUIRender() override
@@ -74,6 +78,14 @@ public:
 			Render();
 		}
 		*/
+
+		// accumulate path tracing
+		ImGui::Checkbox("Accumulate", &renderer_.GetSettings().Accumulate);
+
+		if (ImGui::Button("Reset accumulation"))
+		{
+			renderer_.ResetFrameIndex();
+		}
 
 		ImGui::End();
 
