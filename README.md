@@ -2249,7 +2249,7 @@ static thread_local std::mt19937 s_RandomEngine;
 
 We are now reaching ~100 FPS by using local threads for `Walnut::Random()`.
 
-The code at this point can be seen [here]().
+The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/9d7ec9322c19066fff7c92179bfa12918cebae60/RayTracing/src).
 
 # 12 Emission & Emissive Materials
 
