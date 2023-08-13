@@ -2127,7 +2127,7 @@ Reflections become clearer as more samples are accumulated.
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/a0b814df191d41625714f555b6b790d5d7e42a0b/RayTracing/src).
 
-# 10 Multithreaded Rendering, Parallel Processing, & Optimisation
+# 10 Multithreaded Rendering & Parallel Processing
 
 ## 10.1 Multhitreaded Rendering
 
@@ -2137,7 +2137,7 @@ Multithreading allows the use of multiple CPU cores to execute these computation
 
 In a $1600$ by $900$ image, there are $1400000$ pixels that need to be rendered. These pixels can be rendered independent from each other using multithreading. GPUs which specialise in graphical computations have thousands of cores to handle this.
 
-## 10.2 Optimisation
+## 10.2 Parallel processing
 
 C++ has the `std::for_each()` [function](https://en.cppreference.com/w/cpp/algorithm/for_each) which allows for parallel processing set by its [execution policy](https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t).
 
@@ -2206,19 +2206,50 @@ std::for_each(
 
 <div align="center">
 	<img src="https://i.imgur.com/Vv1WWPp.gif" width="90%">
-	<br><sub>Figure 67. Performance with multithreading</sub>
+	<br><sub>Figure 67. Performance with multithreading.</sub>
 </div><br>
 
-There are twice as many frames rendered with multithreading.
+There are twice as many frames (~15 FPS vs ~30 FPS) rendered with multithreading.
 
 The code at this point can be seen [here](https://github.com/athirazizi/RayTracing/tree/71b7c061c5417810e34e16d413eda5bfc9eaa2a4/RayTracing/src).
 
-# 11 Further System Improvements
+# 11 Further System Improvements & Optimisation
 
-Relevant sources:
+The performance with multithreading is definitely better, but it is questionable.
 
-- source
-- source
+<div align="center">
+	<img src="https://i.imgur.com/hvPxDG3.png" width="90%">
+	<br><sub>Figure 68. CPU utilisation.</sub>
+</div><br>
+
+Suppose that a scene takes $60 ms$ to render on a single core. If there were 8 cores, you would expect the render time to be $7.5 ms$ since the workload is distributed evenly and independently.
+
+Despite all 8 cores being used for multithreaded rendering, the frame output is only 50% better compared to its singlethreaded performance. This suggests that there is [deadlock](https://en.wikipedia.org/wiki/Deadlock) occuring whereby a resource needed for rendering is held up by a core, preventing other cores from accessing it until the core finishes operation. As such, these cores are reliant on this resource to complete operations independently, which limits performance.
+
+Visual Studio 2022 has a [Performance Profiler](https://learn.microsoft.com/en-us/visualstudio/profiling/cpu-usage?view=vs-2022) which can locate these deadlocks. You can access this by pressing `Alt + F2`.
+
+<div align="center">
+	<img src="https://i.imgur.com/SrWivZk.png" width="90%">
+	<br><sub>Figure 69. CPU samples in the call tree.</sub>
+</div><br>
+
+The Total CPU column shows the CPU time or samples spent executing code in the function. We can see that siginificant CPU time is used in `Walnut::Random::Float()`. Essentially, all 8 CPU cores are trying to access a resource within `Walnut::Random()` at the same time. We can fix this by creating individual instances of RNG for each core, which does not have to be shared.
+
+Within `Walnut/Random.h`, we can create an instance of the member responsible for RNG per thread such that each core has its own random instance:
+
+```cpp
+// local instance for each thread
+static thread_local std::mt19937 s_RandomEngine;
+```
+
+<div align="center">
+	<img src="https://i.imgur.com/KybdpSd.gif" width="90%">
+	<br><sub>Figure 70. Performance with RNG instances for each core.</sub>
+</div><br>
+
+We are now reaching ~100 FPS by using local threads for `Walnut::Random()`.
+
+The code at this point can be seen [here]().
 
 # 12 Emission & Emissive Materials
 
