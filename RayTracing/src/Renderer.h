@@ -75,4 +75,7 @@ private:
 	uint32_t frame_index_ = 1;
 
 	Settings settings_;
+
+	// iterate x and y
+	std::vector<uint32_t> image_x_iterator_, image_y_iterator_;
 };

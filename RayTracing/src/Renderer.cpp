@@ -13,6 +13,8 @@
 #include "Walnut/Random.h"
 #include "Renderer.h"
 
+#include <execution>
+
 namespace utility
 {
 	static uint32_t ConvertToRGBA(const glm::vec4& color)
@@ -49,6 +51,20 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 	// allocate accumulation data size
 	delete[] accumulation_data_;
 	accumulation_data_ = new glm::vec4[width * height];
+
+	// set values for x and y iterators
+	image_x_iterator_.resize(width);
+	image_y_iterator_.resize(height);
+
+	for (uint32_t i = 0; i < width; i++)
+	{
+		image_x_iterator_[i] = i;
+	}
+
+	for (uint32_t i = 0; i < height; i++)
+	{
+		image_y_iterator_[i] = i;
+	}
 }
 
 void Renderer::Render(const Scene& scene, const Camera& camera)
@@ -62,25 +78,48 @@ void Renderer::Render(const Scene& scene, const Camera& camera)
 		memset(accumulation_data_, 0, final_image_->GetWidth() * final_image_->GetHeight() * sizeof(glm::vec4));
 	}
 
+	// multithreaded rendering
+
+	std::for_each(
+		// set execution policy to parallel
+		std::execution::par,
+		image_y_iterator_.begin(), 
+		image_y_iterator_.end(),
+		[this](uint32_t y)
+		{
+			std::for_each(
+				std::execution::par,
+				image_x_iterator_.begin(),
+				image_x_iterator_.end(),
+				[this, y](uint32_t x)
+				{
+					// set color to each pixel
+					glm::vec4 color = RayGen(x, y);
+
+					// accumulate colour to be returned
+					accumulation_data_[x + y * final_image_->GetWidth()] += color;
+					glm::vec4 accumulated_color = accumulation_data_[x + y * final_image_->GetWidth()];
+					accumulated_color /= (float)frame_index_;
+
+					// clamp range to between 0 and 1
+					accumulated_color = glm::clamp(accumulated_color, glm::vec4(0.0f), glm::vec4(1.0f));
+
+					// send color to image data
+					image_data_[x + y * final_image_->GetWidth()] = utility::ConvertToRGBA(accumulated_color);
+				});
+		});
+
+	// single threaded rendering
+
+	/*
 	for (uint32_t y = 0; y < final_image_->GetHeight(); y++)
 	{
 		for (uint32_t x = 0; x < final_image_->GetWidth(); x++)
 		{
-			// set color to each pixel
-			glm::vec4 color = RayGen(x, y);
 
-			// accumulate colour to be returned
-			accumulation_data_[x + y * final_image_->GetWidth()] += color;
-			glm::vec4 accumulated_color = accumulation_data_[x + y * final_image_->GetWidth()];
-			accumulated_color /= (float)frame_index_;
-
-			// clamp range to between 0 and 1
-			accumulated_color = glm::clamp(accumulated_color, glm::vec4(0.0f), glm::vec4(1.0f));
-
-			// send color to image data
-			image_data_[x + y * final_image_->GetWidth()] = utility::ConvertToRGBA(accumulated_color);
 		}
 	}
+	*/
 
 	final_image_->SetData(image_data_);
 

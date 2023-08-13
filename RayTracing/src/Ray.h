@@ -7,6 +7,7 @@
 	Date: 2023
 
 	Availability: https://github.com/athirazizi/RayTracing/blob/master/RayTracing/src/Ray.h
+	Adapted from: https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Ray.h (MIT License - Copyright (c) 2022 Studio Cherno)
 */
 
 #pragma once

@@ -2129,12 +2129,91 @@ The code at this point can be seen [here](https://github.com/athirazizi/RayTraci
 
 # 10 Multithreaded Rendering, Parallel Processing, & Optimisation
 
-Relevant sources:
+## 10.1 Multhitreaded Rendering
 
-- source
-- source
+As of now, all the computations for rendering are done sequentially. The pixels are rendered one after the other.
 
-# 11 Further system improvements
+Multithreading allows the use of multiple CPU cores to execute these computations concurrently, leading to better performance. 
+
+In a $1600$ by $900$ image, there are $1400000$ pixels that need to be rendered. These pixels can be rendered independent from each other using multithreading. GPUs which specialise in graphical computations have thousands of cores to handle this.
+
+## 10.2 Optimisation
+
+C++ has the `std::for_each()` [function](https://en.cppreference.com/w/cpp/algorithm/for_each) which allows for parallel processing set by its [execution policy](https://en.cppreference.com/w/cpp/algorithm/execution_policy_tag_t).
+
+The for each function consists of the execution policy, the iterator, and the function which it iterates. The iterator can be stored as private members of the `Render` class:
+
+```cpp
+// iterate x and y
+std::vector<uint32_t> image_x_iterator, image_y_iterator;
+```
+
+We then need to set the values for the iterators in the `OnResize()` function:
+
+```cpp
+// set values for x and y iterators
+image_x_iterator_.resize(width);
+image_y_iterator_.resize(height);
+
+for (uint32_t i = 0; i < width; i++)
+{
+	image_x_iterator_[i] = i;
+}
+
+for (uint32_t i = 0; i < height; i++)
+{
+	image_y_iterator_[i] = i;
+}
+```
+
+The `Render()` function can then be refactored to use the for each function to use parallel processing:
+
+```cpp
+std::for_each(
+	// set execution policy to parallel
+	std::execution::par,
+	image_y_iterator_.begin(), 
+	image_y_iterator_.end(),
+	[this](uint32_t y)
+	{
+		std::for_each(
+			std::execution::par,
+			image_x_iterator_.begin(),
+			image_x_iterator_.end(),
+			[this, y](uint32_t x)
+			{
+				// set color to each pixel
+				glm::vec4 color = RayGen(x, y);
+
+				// accumulate colour to be returned
+				accumulation_data_[x + y * final_image_->GetWidth()] += color;
+				glm::vec4 accumulated_color = accumulation_data_[x + y * final_image_->GetWidth()];
+				accumulated_color /= (float)frame_index_;
+
+				// clamp range to between 0 and 1
+				accumulated_color = glm::clamp(accumulated_color, glm::vec4(0.0f), glm::vec4(1.0f));
+
+				// send color to image data
+				image_data_[x + y * final_image_->GetWidth()] = utility::ConvertToRGBA(accumulated_color);
+			});
+	});
+```
+
+<div align="center">
+	<img src="https://i.imgur.com/JLLiQNu.gif" width="90%">
+	<br><sub>Figure 67. Performance without multithreading.</sub>
+</div><br>
+
+<div align="center">
+	<img src="https://i.imgur.com/Vv1WWPp.gif" width="90%">
+	<br><sub>Figure 67. Performance with multithreading</sub>
+</div><br>
+
+There are twice as many frames rendered with multithreading.
+
+The code at this point can be seen [here]().
+
+# 11 Further System Improvements
 
 Relevant sources:
 

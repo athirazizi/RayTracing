@@ -7,6 +7,7 @@
 	Date: 2023
 
 	Availability: https://github.com/athirazizi/RayTracing/blob/master/RayTracing/src/Scene.h
+	Adapted from: https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src//Scene.h (MIT License - Copyright (c) 2022 Studio Cherno)
 */
 
 #pragma once
