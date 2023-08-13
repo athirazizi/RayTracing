@@ -143,8 +143,10 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 	ray.Direction = active_camera_->GetRayDirections()[x + y * final_image_->GetWidth()];
 
 	// final colour to be returned
-	glm::vec3 final_color(0.0f);
-	float multiplier = 1.0f;
+	glm::vec3 light(0.0f);
+
+	// colour contribution of the ray
+	glm::vec3 throughput{ 1.0f };
 
 	int bounces = 5;
 	for (int i = 0; i < bounces; i++)
@@ -157,15 +159,9 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 			glm::vec3 background_color = glm::vec3(0.7f, 0.9f, 1.0f);
 
 			// take into account background colour when rendering
-			final_color += background_color * multiplier;
+			//light += background_color * throughput;
 			break;
 		}
-
-		// you can change the light direction here
-		glm::vec3 light_direction = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
-
-		// dot(normal, -lightDir) == cos(angle)
-		float light_intensity = glm::max(glm::dot(payload.WorldNormal, -light_direction), 0.0f); // == cos(angle)
 
 		// intersected sphere
 		const Sphere& sphere = active_scene_->Spheres[payload.ObjectIndex];
@@ -173,24 +169,31 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 		const Material& material = active_scene_->Materials[sphere.MaterialIndex];
 
 		glm::vec3 sphere_color = material.Albedo;
-		sphere_color *= light_intensity;
 
-		// darken the image by multiplier
-		final_color += sphere_color * multiplier;
+		// darken the image by throughput
+		//light += material.Albedo * throughput;
 
-		multiplier *= 0.5f;
+		// absorb material albedo
+		throughput *= material.Albedo;
+		light += material.GetEmission();
 
 		// change origin and direction for the next bounce
 		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
 
 		// reflect according to the microfacet model
 		// i.e., roughness, and a range
+
+		/*
 		ray.Direction = glm::reflect(ray.Direction, 
 			payload.WorldNormal + material.Roughness * Walnut::Random::Vec3(-0.5f, 0.5f));
+		*/
+
+		// return a random direction, with is biased towards the normal
+		ray.Direction = glm::normalize(payload.WorldNormal) + Walnut::Random::InUnitSphere();
 	}
 
 	//color = normal * 0.5f + 0.5f; // sets x,y,z as r,g,b
-	return glm::vec4(final_color, 1.0f);
+	return glm::vec4(light, 1.0f);
 }
 
 Renderer::HitInfo Renderer::TraceRay(const Ray& ray)

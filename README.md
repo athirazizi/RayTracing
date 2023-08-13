@@ -2255,5 +2255,64 @@ The code at this point can be seen [here](https://github.com/athirazizi/RayTraci
 
 Relevant sources:
 
-- source
-- source
+- [PBRT 12 - Light Sources](https://www.pbr-book.org/3ed-2018/Light_Sources)
+- [PBRT 12.5 - Area Lights](https://pbr-book.org/3ed-2018/Light_Sources/Area_Lights)
+- [PBRT 8.2 - Specular Reflection and Transmission](https://www.pbr-book.org/3ed-2018/Reflection_Models/Specular_Reflection_and_Transmission)
+
+Emissive materials are materials which emit light. Every surface in the real world will absorb some light, and the rest is reflected.
+
+There are materials which act as light sources, and PBRT divides these into point lights, distant lights, area lights, and infinite area lights.
+
+A real world example of an emissive source is the sun, which basically directs light everywhere. Another example is a light bulb which has been turned on, where the filament acts as the emissive material.
+
+Currently our ray tracing system has a simple point light but we can extend this further.
+
+```cpp
+glm::vec3 EmissionColor{ 0.0f };
+float EmissionPower = 0.0f;
+glm::vec3 GetEmission()const { return EmissionColor * EmissionPower; }
+```
+
+A material can have an emission colour and an emission power which decides its emissive property.
+
+The Walnut UI can be implemented like so:
+
+```cpp
+ImGui::ColorEdit3("Emission colour", glm::value_ptr(material.EmissionColor));
+ImGui::DragFloat("Emission power", &material.EmissionPower, 0.05f, 0.0f, FLT_MAX);
+```
+
+Materials absorb different wavelenghts of light, resulting in its final colour. Therefore whatever ray intersects with the surface should be divided into RGB channels:
+
+```cpp
+// colour contribution of the ray
+glm::vec3 throughput{ 1.0f };
+```
+
+```cpp
+throughput *= material.Albedo;
+```
+
+This effectively absorbs the ray throughput on the object's surface.
+
+<div align="center">
+	<img src="https://i.imgur.com/Y8esEBi.png" width="90%">
+	<br><sub>Figure 71. Diffuse lighting on two spheres.</sub>
+</div><br>
+
+<div align="center">
+	<img src="https://i.imgur.com/93yoxnQ.png" width="90%">
+	<br><sub>Figure 72. Returning light with emission bias.</sub>
+</div><br>
+
+<div align="center">
+	<img src="https://i.imgur.com/mojJb9M.png" width="90%">
+	<br><sub>Figure 73. Render with no background colour.</sub>
+</div><br>
+
+<div align="center">
+	<img src="https://i.imgur.com/Vp5Ix87.png" width="90%">
+	<br><sub>Figure 74. Render with two emissive materials.</sub>
+</div><br>
+
+The code at this point can be seen [here]().
