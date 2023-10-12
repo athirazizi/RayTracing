@@ -27,7 +27,7 @@ Other resources:
 
 # 01 Setting up the project
 
-## 1.1 Using the Walnup App Template
+## 1.1 Using the Walnut App Template
 
 [Walnut](https://github.com/TheCherno/WalnutAppTemplate) is an application development framework which will act as the base of the project.
 
@@ -55,7 +55,7 @@ Once the repo has been cloned, run the `Setup.bat` script:
 	<br><sub>Figure 2. The Setup.bat script.</sub>
 </div><br>
 
-This will create a `.sln` file for the Walnup App. The code for this can be found [here](https://github.com/TheCherno/WalnutAppTemplate/blob/master/WalnutApp/src/WalnutApp.cpp).
+This will create a `.sln` file for the Walnut App. The code for this can be found [here](https://github.com/TheCherno/WalnutAppTemplate/blob/master/WalnutApp/src/WalnutApp.cpp).
 
 As with any new project, hit F5 and run the solution. This is what we are greeted with:
 
@@ -268,7 +268,7 @@ void Render()
 		image_data_[i] |= 0xff000000;
 	}
 
-	// set data, which uploads to the GPU
+	// set data, which uploads to the CPU
 	image_->SetData(image_data_);
 
 	render_time_ = timer.ElapsedMillis();
@@ -1380,7 +1380,7 @@ The `rightDirection` vector captures the $x$-directional vector. This is the cro
 
 The `W,A,S,D` keys are used as input keys:
 
-If the user presses `W`, the camera moves forward. The distance it moves forward is multiplied by a fixed `speed` and `ts` (timestep, so the movement is scaled appropriately based on how fast the program is running). Similarly, the `S` key moves backwards, `D` moves to the right, `A` moves to the left. `E` moves the position of the camera upwards, and `Q` downwards. Additionally, the `moved` flag is set to true so the ray directions are recalculated. We can change the input keys using the `KeyCode` if the user prefers another movement setup.
+If the user presses `W`, the camera moves forward. The distance it moves forward is multiplied by a fixed `speed` and `ts` (timestep, so the movement is scaled appropriately based on how fast the program is running). Similarly, the `S` key moves backwards, `D` moves to the right, `A` moves to the left. `Space` moves the position of the camera upwards, and `LeftCtrl` downwards. Additionally, the `moved` flag is set to true so the ray directions are recalculated. We can change the input keys using the `KeyCode` if the user prefers another movement setup.
 
 Likewise, we will have to recalculate ray directions if the camera rotates. If the mouse moves up and down, the pitch will change depending on the `delta.y` component. If the mouse moves left and right, the yaw will change depending on the `delta.x` component.
 
@@ -1431,7 +1431,7 @@ The Walnut camera has an attribute `m_RayDirections`:
 std::vector<glm::vec3> m_RayDirections;
 ```
 
-It is associated with the `RecalculateRayDirections()` function which some cached calculations based on the view and projection matrices:
+It is associated with the `RecalculateRayDirections()` function which performs some cached calculations based on the view and projection matrices:
 
 ```cpp
 void Camera::RecalculateRayDirections() {
@@ -1470,7 +1470,7 @@ The `target` variable is an intermetiate vector which is the inverse projection 
 
 The `rayDirection` multiplies the inverse view matrix by the normalised target with a perspective division.
 
-We then cache the ray directions, as the normalisation operation and the matrix multiplication operations might slow the CPU down. [Single instruction multiple data](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data) (SIMD) performs these operations in fewer instructions, leading to faster execution times. Later on, this code will be refactored to be run on the GPU inside a shader (computer/raygen shader) where execution times will be fast.
+We then cache the ray directions, as the normalisation operation and the matrix multiplication operations might slow the CPU down. [Single instruction multiple data](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data) (SIMD) performs these operations in fewer instructions, leading to faster execution times. Later on, this code will be refactored to be run on the GPU inside a shader (computer/raygen shader) where execution times will be faster.
 
 ## 5.4 Using the Camera Class
 
@@ -1795,9 +1795,9 @@ Relevant sources:
 In this section, we will be refactoring the program to use modern ray tracing pipeline components. NVIDIA's DirectX uses 5 distinct shaders for ray tracing:
 
 1. **Ray generation shader** - responsible for generating rays; sets up initial ray parameters
-2. **Intersection shader** - determines if a ray-object intersection occurs and provides information about that intersection (surface normals, textures, material properties)
+2. **Intersection shader** - determines if a ray-object intersection occurs
 3. **Miss shader** - invoked when no ray-object intersection occurs, typically returning the background colour
-4. **Closest hit shader** - invoked when a ray-object intersection occurs; returns the final colour and appearance of the intersected object, while considering its properties
+4. **Closest hit shader** - invoked when a ray-object intersection occurs; returns the final colour and appearance of the intersected object, via a hit payload (which includes surface normals, textures, material properties)
 5. **Any-hit shader** - optional shader used for transparent/translucent textures 
 
 <div align="center">
@@ -1911,7 +1911,7 @@ Suppose that the scene is set up like so:
 	<br><sub>Figure 60. A primary sphere and a secondary sphere acting as a floor.</sub>
 </div><br>
 
-In the `Sphere` struct, it has an `Albedo` property which is the non-illuminated surface colour. However,  it does not have a reflective property. Material properties can vary and so it can be difficult to parameterise these properties and represent them asmaterials in the real world.
+In the `Sphere` struct, it has an `Albedo` property which is the non-illuminated surface colour. However,  it does not have a reflective property. Material properties can vary and so it can be difficult to parameterise these properties and represent them as materials in the real world.
 
 ## 8.2 Physically Based Rendering (PBR)
 

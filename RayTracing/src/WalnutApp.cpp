@@ -7,7 +7,7 @@
 	Date: 2023
 
 	Availability: https://github.com/athirazizi/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
-	Adapted from: https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp (MIT License - Copyright (c) 2022 Studio Cherno)
+	Adapted from: https://github.com/TheCherno/RayTracing/ (MIT License - Copyright (c) 2022 Studio Cherno)
 */
 
 #include "Walnut/Application.h"
@@ -23,49 +23,86 @@
 
 using namespace Walnut;
 
-class ExampleLayer : public Walnut::Layer
+class FrontEnd : public Walnut::Layer
 {
 public:
-	ExampleLayer()
+	FrontEnd()
 		: camera_(45.0f, 0.1f, 100.0f)
 	{
 		// materials in the scene
-		Material& greenSphere = scene_.Materials.emplace_back();
-		greenSphere.Albedo = { 0.0f, 1.0f, 0.0f };
-		greenSphere.Roughness = 0.1f;
+		Material& floor = scene_.Materials.emplace_back();
+		floor.Albedo = { 0.1f, 0.1f, 0.1f };
+		//floor.Albedo = { 1.0f, 1.0f, 1.0f };
+		floor.Roughness = 0.0f;
+		floor.EmissionColor = floor.Albedo;
+		floor.EmissionPower = 0;
 
-		Material& orangeSphere = scene_.Materials.emplace_back();
-		orangeSphere.Albedo = { 1.0f, 0.0f, 1.0f };
-		orangeSphere.Roughness = 0.1f;
-		orangeSphere.EmissionColor = orangeSphere.Albedo;
-		orangeSphere.EmissionPower = 2.0f;
+		Material& red = scene_.Materials.emplace_back();
+		red.Albedo = { 1.0f, 0.0f, 0.0f };
+		red.Roughness = 0.1f;
+		red.EmissionColor = red.Albedo;
+		red.EmissionPower = 0.5;
 
-		Material& greySphere = scene_.Materials.emplace_back();
-		greySphere.Albedo = { 0.2f, 0.2f, 0.2f };
-		greySphere.Roughness = 0.1f;
+		Material& green = scene_.Materials.emplace_back();
+		green.Albedo = { 0.0f, 1.0f, 0.0f };
+		green.Roughness = 0.1f;
+		green.EmissionColor = green.Albedo;
+		green.EmissionPower = 0.5;
+
+		Material& blue = scene_.Materials.emplace_back();
+		blue.Albedo = { 0.0f, 0.0f, 1.0f };
+		blue.Roughness = 0.1f;
+		blue.EmissionColor = blue.Albedo;
+		blue.EmissionPower = 0.5;
+
+		Material& cyan = scene_.Materials.emplace_back();
+		cyan.Albedo = { 0.0f, 1.0f, 1.0f };
+		cyan.Roughness = 0.1f;
+		cyan.EmissionColor = cyan.Albedo;
+		cyan.EmissionPower = 0.5;
+
+		Material& yellow = scene_.Materials.emplace_back();
+		yellow.Albedo = { 1.0f, 1.0f, 0.0f };
+		yellow.Roughness = 0.1f;
+		yellow.EmissionColor = yellow.Albedo;
+		yellow.EmissionPower = 0.5;
+
+		Material& magenta = scene_.Materials.emplace_back();
+		magenta.Albedo = { 1.0f, 0.0f, 1.0f };
+		magenta.Roughness = 0.1f;
+		magenta.EmissionColor = magenta.Albedo;
+		magenta.EmissionPower = 0.5;
 
 		// spheres in the scene
 		{
 			Sphere sphere;
-			sphere.Position = { 0.0f, 0.0f, 0.0f };
-			sphere.Radius = 1.0f;
+			sphere.Position = { 0.0f, -1000.5f, 0.0f };
+			sphere.Radius = 1000.0f;
 			sphere.MaterialIndex = 0;
 			scene_.Spheres.push_back(sphere);
 		}
 
 		{
 			Sphere sphere;
-			sphere.Position = { 2.0f, 0.0f, 0.0f };
-			sphere.Radius = 1.0f;
+			sphere.Position = { 0.0f, 0.0f, 0.0f };
+			sphere.Radius = 0.5f;
 			sphere.MaterialIndex = 1;
 			scene_.Spheres.push_back(sphere);
 		}
 
 		{
 			Sphere sphere;
-			sphere.Position = { 0.0f, -101.0f, 0.0f };
-			sphere.Radius = 100.0f;
+			sphere.Position = { 1.1f, 0.0f, 0.0f };
+			sphere.Radius = 0.5f;
 			sphere.MaterialIndex = 2;
+			scene_.Spheres.push_back(sphere);
+		}
+
+		{
+			Sphere sphere;
+			sphere.Position = { 0.0f, 0.0f, 1.1f };
+			sphere.Radius = 0.5f;
+			sphere.MaterialIndex = 3;
 			scene_.Spheres.push_back(sphere);
 		}
 
@@ -103,7 +140,7 @@ public:
 
 		ImGui::End();
 
-		ImGui::Begin("Scene");
+		ImGui::Begin("Scene spheres");
 
 		// iterate through spheres
 		for (size_t i = 0; i < scene_.Spheres.size(); i++)
@@ -119,6 +156,11 @@ public:
 			ImGui::PopID();
 		}
 
+		ImGui::End();
+
+
+		ImGui::Begin("Scene materials");
+
 		// iterate through materials
 		for (size_t i = 0; i < scene_.Materials.size(); i++)
 		{
@@ -128,7 +170,7 @@ public:
 
 			ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
 			ImGui::DragFloat("Rougness", &material.Roughness, 0.05f, 0.0f, 1.0f);
-			ImGui::DragFloat("Metallic", &material.Metallic, 0.05f, 0.0f, 1.0f);
+			//ImGui::DragFloat("Metallic", &material.Metallic, 0.05f, 0.0f, 1.0f);
 			ImGui::ColorEdit3("Emission colour", glm::value_ptr(material.EmissionColor));
 			ImGui::DragFloat("Emission power", &material.EmissionPower, 0.05f, 0.0f, FLT_MAX);
 
@@ -191,7 +233,7 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 	spec.Name = "Ray Tracing";
 
 	Walnut::Application* app = new Walnut::Application(spec);
-	app->PushLayer<ExampleLayer>();
+	app->PushLayer<FrontEnd>();
 	app->SetMenubarCallback([app]()
 		{
 			if (ImGui::BeginMenu("File"))

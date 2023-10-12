@@ -7,7 +7,7 @@
 	Date: 2023
 
 	Availability: https://github.com/athirazizi/RayTracing/blob/master/RayTracing/src/Renderer.cpp
-	Adapted from: https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.cpp (MIT License - Copyright (c) 2022 Studio Cherno)
+	Adapted from: https://github.com/TheCherno/RayTracing/ (MIT License - Copyright (c) 2022 Studio Cherno)
 */
 
 #include "Walnut/Random.h"
@@ -109,18 +109,6 @@ void Renderer::Render(const Scene& scene, const Camera& camera)
 				});
 		});
 
-	// single threaded rendering
-
-	/*
-	for (uint32_t y = 0; y < final_image_->GetHeight(); y++)
-	{
-		for (uint32_t x = 0; x < final_image_->GetWidth(); x++)
-		{
-
-		}
-	}
-	*/
-
 	final_image_->SetData(image_data_);
 
 	// increments frame index if accumulation is turned on
@@ -155,11 +143,12 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 		Renderer::HitInfo payload = TraceRay(ray);
 		if (payload.HitDistance < 0.0f)
 		{
-			// return background colour if missed
-			glm::vec3 background_color = glm::vec3(0.7f, 0.9f, 1.0f);
+			// demo: background colour
+			//glm::vec3 background_color = glm::vec3(1.0f, 0.0f, 0.0f);
+			glm::vec3 background_color = glm::vec3(0.529f, 0.808f, 0.922f);
 
 			// take into account background colour when rendering
-			//light += background_color * throughput;
+			light += background_color * throughput;
 			break;
 		}
 
@@ -180,6 +169,7 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 		// change origin and direction for the next bounce
 		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
 
+		// demo: reflectance
 		// reflect according to the microfacet model
 		// i.e., roughness, and a range
 
@@ -187,7 +177,9 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y)
 		ray.Direction = glm::reflect(ray.Direction, 
 			payload.WorldNormal + material.Roughness * Walnut::Random::Vec3(-0.5f, 0.5f));
 		*/
+		
 
+		// demo: emissivity
 		// return a random direction, with is biased towards the normal
 		ray.Direction = glm::normalize(payload.WorldNormal) + Walnut::Random::InUnitSphere();
 	}

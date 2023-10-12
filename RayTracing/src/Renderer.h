@@ -7,7 +7,7 @@
 	Date: 2023
 
 	Availability: https://github.com/athirazizi/RayTracing/blob/master/RayTracing/src/Renderer.h
-	Adapted from: https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h (MIT License - Copyright (c) 2022 Studio Cherno)
+	Adapted from: https://github.com/TheCherno/RayTracing/ (MIT License - Copyright (c) 2022 Studio Cherno)
 */
 
 #pragma once
@@ -55,6 +55,7 @@ private:
 
 	// ray generation shader
 	glm::vec4 RayGen(uint32_t x, uint32_t y);
+	// intersection shader
 	HitInfo TraceRay(const Ray& ray);
 
 	// closest hit shader
